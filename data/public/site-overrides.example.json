@@ -1,0 +1,11 @@
+{
+  "siteDisplayName": "某沿海火电厂",
+  "units": [
+    {
+      "internalId": "unit-a",
+      "displayName": "示例机组",
+      "publishApproved": false
+    }
+  ],
+  "media": []
+}

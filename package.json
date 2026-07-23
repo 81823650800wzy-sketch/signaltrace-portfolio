@@ -1,0 +1,27 @@
+{
+  "name": "signaltrace-portfolio",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run sync:content && vite --host 127.0.0.1",
+    "sync:content": "node scripts/sync-content.mjs",
+    "validate:data": "node scripts/validate-process.mjs",
+    "validate:portfolio": "node scripts/validate-portfolio.mjs",
+    "check": "npm run sync:content && npm run validate:data && npm run validate:portfolio && tsc --noEmit",
+    "build": "npm run check && vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "lucide-react": "^1.25.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5"
+  }
+}

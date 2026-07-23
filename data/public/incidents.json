@@ -1,0 +1,72 @@
+[
+  {
+    "id": "thermocouple-signal",
+    "title": "温度信号失真复盘",
+    "shortTitle": "温度信号",
+    "primarySystem": "control",
+    "status": "closed",
+    "evidenceLevel": "sanitized",
+    "summary": "一次温度读数明显超出常用量程。复盘按信号链路确认异常，并在许可条件下修复后复测。",
+    "productOpportunity": "把量程合理性、过程上下文与信号链路检查合并为可追溯的异常处置卡。",
+    "focusNodeIds": ["field-sensor", "io", "dcs", "work-order", "maintenance", "verification"],
+    "steps": [
+      { "id": "observe", "label": "识别异常", "detail": "DCS 读数明显超出仪表常用量程，先作为异常信号处理。", "kind": "fact", "focusNodeIds": ["dcs", "field-sensor"] },
+      { "id": "assess", "label": "核对合理性", "detail": "对照量程和过程合理性，避免把单点异常直接解释为真实工况突变。", "kind": "fact", "focusNodeIds": ["field-sensor", "dcs"] },
+      { "id": "trace", "label": "沿链路排查", "detail": "按测点、接线、接口和控制系统的顺序定位，减少无关拆检。", "kind": "fact", "focusNodeIds": ["field-sensor", "io", "dcs", "work-order"] },
+      { "id": "repair", "label": "许可后修复", "detail": "确认信号断连后，在工作许可条件下完成修复。", "kind": "fact", "focusNodeIds": ["work-order", "maintenance", "field-sensor"] },
+      { "id": "verify", "label": "复测闭环", "detail": "修复后信号回归合理范围；具体运行参数不在公开案例中展示。", "kind": "fact", "focusNodeIds": ["verification", "dcs"] }
+    ]
+  },
+  {
+    "id": "recurrent-level-radar",
+    "title": "重复液位测量故障复盘",
+    "shortTitle": "液位测量",
+    "primarySystem": "control",
+    "status": "tracking",
+    "evidenceLevel": "sanitized",
+    "summary": "同类液位测量异常近期重复出现。当前案例保留已观察事实、现场推断和待确认事项，避免把假设写成结论。",
+    "productOpportunity": "用故障时间线串联重复工单、相似症状与验证结果，推动根因关闭而非单次恢复。",
+    "focusNodeIds": ["field-sensor", "io", "dcs", "work-order", "maintenance", "verification"],
+    "steps": [
+      { "id": "repeat", "label": "发现重复", "detail": "近期同类液位测量异常被重复处理，属于需要建立故障档案的重复事件。", "kind": "fact", "focusNodeIds": ["dcs", "work-order"] },
+      { "id": "inspect", "label": "检查测量环境", "detail": "现场观察到污染或凝结可能影响雷达回波，但这不是已确认根因。", "kind": "inference", "focusNodeIds": ["field-sensor", "maintenance"] },
+      { "id": "restore", "label": "恢复与记录", "detail": "每次恢复都应保留症状、处置方式和复测结果，供下一次比对。", "kind": "fact", "focusNodeIds": ["work-order", "maintenance", "verification"] },
+      { "id": "confirm", "label": "等待验证", "detail": "清理、调整或改造是否能消除重复故障，仍需通过后续复测确认。", "kind": "unknown", "focusNodeIds": ["verification", "field-sensor"] }
+    ]
+  },
+  {
+    "id": "pressure-gauge-diagnosis",
+    "title": "压力表消缺判断复盘",
+    "shortTitle": "压力表判断",
+    "primarySystem": "control",
+    "status": "closed",
+    "evidenceLevel": "sanitized",
+    "summary": "两处相似表象通过设备状态与仪表状态区分：一处确认失准并更换，另一处反映了设备未启动时的真实状态。",
+    "productOpportunity": "在消缺记录中加入设备运行状态、隔离条件与表计自检项，减少仅凭指针读数的误判。",
+    "focusNodeIds": ["field-sensor", "dcs", "work-order", "maintenance", "verification"],
+    "steps": [
+      { "id": "compare", "label": "对比表象", "detail": "两块压力表都出现低读数或不归零表象，不能只凭外观做相同结论。", "kind": "fact", "focusNodeIds": ["field-sensor", "dcs"] },
+      { "id": "replace", "label": "确认失准", "detail": "其中一块表的指针未能归零，按仪表失准处理并完成更换。", "kind": "fact", "focusNodeIds": ["field-sensor", "work-order", "maintenance"] },
+      { "id": "context", "label": "核对设备状态", "detail": "另一处压力未释放，是因为关联设备尚未启动；该读数反映真实状态，不属于仪表故障。", "kind": "fact", "focusNodeIds": ["field-sensor", "dcs", "verification"] },
+      { "id": "close", "label": "形成判断依据", "detail": "消缺结论应同时记录表计状态、设备状态和复核路径，便于复盘与交接。", "kind": "fact", "focusNodeIds": ["work-order", "verification"] }
+    ]
+  },
+  {
+    "id": "hydrogen-purity-response",
+    "title": "氢气纯度仪响应等待复盘",
+    "shortTitle": "响应等待",
+    "primarySystem": "control",
+    "status": "tracking",
+    "evidenceLevel": "sanitized",
+    "summary": "就地等待读数稳定耗时较长。复盘把录像读数、指数拟合、等待判据和待复核边界分开表达，避免把模型预测直接当作正式结论。",
+    "productOpportunity": "在复盘工具中加入响应曲线、预测稳定值、变化速率和连续收敛判定，帮助识别可以缩短等待的场景，同时提示何时必须继续现场验证。",
+    "focusNodeIds": ["field-sensor", "io", "dcs", "verification"],
+    "steps": [
+      { "id": "observe-wait", "label": "发现等待过长", "detail": "就地观察时，浓度读数需要较长时间才趋于稳定，单纯等待难以判断何时已经足够接近平衡。", "kind": "fact", "focusNodeIds": ["field-sensor"] },
+      { "id": "record-video", "label": "录像取样", "detail": "通过录像记录读数变化，再按时间整理为可计算的数据点；公开案例只保留脱敏后的响应规律。", "kind": "fact", "focusNodeIds": ["field-sensor", "verification"] },
+      { "id": "fit-model", "label": "指数拟合", "detail": "分析报告使用指数模型拟合读数趋稳过程，说明等待时间可能与变化量、时间常数和收敛速度有关。", "kind": "inference", "focusNodeIds": ["io", "dcs"] },
+      { "id": "stop-rule", "label": "提出判据", "detail": "可把预测值连续收敛和最近变化速率足够小作为双重停止条件，但阈值必须经当前设备和现场条件复核后才能使用。", "kind": "unknown", "focusNodeIds": ["dcs", "verification"] },
+      { "id": "boundary", "label": "保留边界", "detail": "AI生成报告用于学习复盘和方法验证，不替代厂家规程、师傅判断或正式校验记录。", "kind": "fact", "focusNodeIds": ["work-order", "verification"] }
+    ]
+  }
+]

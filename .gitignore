@@ -1,0 +1,33 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+android-app/local.properties
+android-app/.gradle/
+android-app/build/
+android-app/app/build/
+*.key
+*.pem
+
+# Private internship material must never enter this repository
+private/
+data/private/
+logs/raw/
+field-media/raw/
+**/*confidential*
+**/*内部*
+**/*保密*
+
+# Generated assets and caches
+node_modules/
+dist/
+.vite/
+.cache/
+coverage/
+*.blend1
+*.tmp
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini

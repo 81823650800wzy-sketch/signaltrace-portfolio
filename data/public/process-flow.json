@@ -1,0 +1,109 @@
+{
+  "meta": {
+    "title": "燃煤机组全流程训练图",
+    "version": "2026.07-mvp1",
+    "dataMode": "public-and-synthetic"
+  },
+  "systems": [
+    { "id": "fuel", "name": "煤与空气", "shortName": "燃料/空气", "color": "#3f5961" },
+    { "id": "steam", "name": "汽水循环", "shortName": "汽水", "color": "#c65f32" },
+    { "id": "flue", "name": "烟气治理", "shortName": "烟气", "color": "#806177" },
+    { "id": "electric", "name": "机械能与电能", "shortName": "电力", "color": "#c28a0d" },
+    { "id": "waste", "name": "副产物与废水", "shortName": "副产物", "color": "#638044" },
+    { "id": "control", "name": "仪控与消缺闭环", "shortName": "仪控", "color": "#b7467d" }
+  ],
+  "sources": [
+    {
+      "id": "S01",
+      "title": "生态环境部：火电企业环境守法导则",
+      "url": "https://www.mee.gov.cn/gkml/hbb/bgth/201109/W020110929386032902893.pdf"
+    },
+    {
+      "id": "S02",
+      "title": "生态环境部：火电厂污染防治技术政策",
+      "url": "https://www.mee.gov.cn/gkml/hbb/bgg/201701/t20170117_394809.htm"
+    },
+    {
+      "id": "S03",
+      "title": "浙江省环境监测中心：温电烟气脱硝改造验收报告",
+      "url": "https://zjjcmspublic.oss-cn-hangzhou-zwynet-d01-a.internet.cloud.zj.gov.cn/jcms_files/jcms1/web2490/site/attach/files/2014-3/201432131831.pdf"
+    }
+  ],
+  "nodes": [
+    { "id": "coal-yard", "name": "煤接卸与储存", "shortName": "煤场", "systems": ["fuel"], "x": 50, "y": 90, "function": "接收、储存并按需要向输煤系统供煤。具体接卸方式以厂级公开资料或获准现场信息为准。", "inputs": ["原煤"], "outputs": ["待输送原煤"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "conveyor", "name": "输煤与碎煤系统", "shortName": "输煤/碎煤", "systems": ["fuel"], "x": 220, "y": 90, "function": "将原煤输送、筛分和破碎到适合制粉系统处理的粒度。", "inputs": ["原煤"], "outputs": ["破碎煤"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "coal-mill", "name": "磨煤机", "shortName": "制粉", "systems": ["fuel"], "x": 390, "y": 90, "function": "把煤磨成煤粉，并由一次风携带送往燃烧器。", "inputs": ["破碎煤", "一次风"], "outputs": ["煤粉气流"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "forced-draft-fan", "name": "送风系统", "shortName": "送风", "systems": ["fuel"], "x": 560, "y": 20, "function": "向锅炉提供燃烧所需空气，并支持一次风、二次风等支路。", "inputs": ["环境空气"], "outputs": ["燃烧空气"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "boiler", "name": "锅炉炉膛", "shortName": "锅炉", "systems": ["fuel", "steam", "flue", "waste"], "x": 850, "y": 90, "function": "煤粉与空气燃烧释放热量，完成燃料化学能向蒸汽热能的转换，并产生烟气、飞灰和炉渣。", "inputs": ["煤粉", "空气", "给水"], "outputs": ["过热蒸汽", "烟气", "灰渣"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+
+    { "id": "condenser", "name": "凝汽器", "shortName": "凝汽器", "systems": ["steam"], "x": 50, "y": 245, "function": "将汽轮机排汽冷凝为水，维持汽轮机背压并回收工质。", "inputs": ["汽轮机排汽", "冷却介质"], "outputs": ["凝结水"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "condensate-pump", "name": "凝结水泵", "shortName": "凝结水泵", "systems": ["steam"], "x": 210, "y": 245, "function": "提升凝结水压力并送入低压加热和除氧环节。", "inputs": ["凝结水"], "outputs": ["加压凝结水"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "low-pressure-heaters", "name": "低压加热器", "shortName": "低压加热", "systems": ["steam"], "x": 370, "y": 245, "function": "利用汽轮机抽汽逐级加热凝结水，提高循环热效率。", "inputs": ["凝结水", "抽汽"], "outputs": ["加热凝结水"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "deaerator", "name": "除氧器", "shortName": "除氧器", "systems": ["steam"], "x": 530, "y": 245, "function": "加热给水并去除溶解氧等不凝结气体，降低设备腐蚀风险。", "inputs": ["加热凝结水", "抽汽"], "outputs": ["除氧给水"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "feedwater-pump", "name": "锅炉给水泵", "shortName": "给水泵", "systems": ["steam"], "x": 690, "y": 245, "function": "把除氧给水提升到锅炉所需压力。", "inputs": ["除氧给水"], "outputs": ["高压给水"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "economizer", "name": "省煤器", "shortName": "省煤器", "systems": ["steam", "flue"], "x": 850, "y": 245, "function": "利用尾部烟气余热加热锅炉给水，降低排烟热损失。", "inputs": ["高压给水", "高温烟气"], "outputs": ["加热给水", "降温烟气"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "superheater", "name": "过热与再热系统", "shortName": "过热/再热", "systems": ["steam", "flue"], "x": 1030, "y": 245, "function": "把蒸汽加热到汽轮机入口状态，并对高压缸排汽再热。图中合并表示，实际设备分级更复杂。", "inputs": ["饱和或中间蒸汽", "烟气热量"], "outputs": ["过热蒸汽", "再热蒸汽"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "turbine", "name": "汽轮机", "shortName": "汽轮机", "systems": ["steam", "electric"], "x": 1200, "y": 245, "function": "高温高压蒸汽膨胀做功，带动同轴发电机旋转。", "inputs": ["主蒸汽", "再热蒸汽"], "outputs": ["轴功率", "排汽"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "generator", "name": "发电机", "shortName": "发电机", "systems": ["electric"], "x": 1370, "y": 245, "function": "把汽轮机传来的机械能转换为电能。", "inputs": ["轴功率"], "outputs": ["电能"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "transformer", "name": "主变压器", "shortName": "主变", "systems": ["electric"], "x": 1530, "y": 245, "function": "将发电机出口电压升高后送往配电装置与电网。", "inputs": ["发电机电能"], "outputs": ["升压电能"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "grid", "name": "电网与厂用电", "shortName": "电网/厂用", "systems": ["electric"], "x": 1680, "y": 245, "function": "电能经升压后送入电网，同时分出厂用电支撑泵、风机和制粉等辅机。", "inputs": ["升压电能"], "outputs": ["上网电量", "厂用电"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+
+    { "id": "rear-heating", "name": "尾部受热面", "shortName": "尾部受热面", "systems": ["flue"], "x": 850, "y": 400, "function": "烟气依次与受热面换热后进入脱硝和后续净化系统。此节点是多级设备的概念合并。", "inputs": ["炉膛烟气"], "outputs": ["换热后烟气"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "scr", "name": "SCR 脱硝", "shortName": "SCR 脱硝", "systems": ["flue", "control"], "x": 680, "y": 400, "function": "在催化剂作用下，以含氨还原剂将烟气中的氮氧化物转化为氮气和水。温电公开验收资料记载尿素热解路线。", "inputs": ["含 NOx 烟气", "尿素热解产物"], "outputs": ["脱硝烟气"], "evidenceLevel": "public-plant", "sourceIds": ["S02", "S03"] },
+    { "id": "air-preheater", "name": "空气预热器", "shortName": "空气预热", "systems": ["fuel", "flue"], "x": 510, "y": 400, "function": "利用烟气余热加热燃烧空气，在烟气和空气两条流程之间回收热量。", "inputs": ["脱硝烟气", "冷空气"], "outputs": ["降温烟气", "热空气"], "evidenceLevel": "public-general", "sourceIds": ["S01", "S03"] },
+    { "id": "dust-collector", "name": "高效除尘器", "shortName": "除尘", "systems": ["flue", "waste"], "x": 340, "y": 400, "function": "从烟气中捕集飞灰颗粒，常见技术包括静电、电袋复合或袋式除尘。", "inputs": ["含尘烟气"], "outputs": ["低尘烟气", "飞灰"], "evidenceLevel": "public-general", "sourceIds": ["S01", "S02"] },
+    { "id": "fgd", "name": "烟气脱硫", "shortName": "湿法脱硫", "systems": ["flue", "waste"], "x": 180, "y": 400, "function": "使用吸收剂去除二氧化硫；石灰石-石膏湿法会产生石膏副产物。具体路线按机组资料确认。", "inputs": ["低尘烟气", "脱硫吸收剂"], "outputs": ["脱硫烟气", "石膏", "脱硫废水"], "evidenceLevel": "public-general", "sourceIds": ["S01", "S02"] },
+    { "id": "stack", "name": "烟囱与连续监测", "shortName": "烟囱/CEMS", "systems": ["flue", "control"], "x": 20, "y": 400, "function": "处理后烟气经烟囱排放，并由连续监测系统记录主要污染物和烟气参数。", "inputs": ["治理后烟气"], "outputs": ["达标排放监测数据"], "evidenceLevel": "public-plant", "sourceIds": ["S02", "S03"] },
+
+    { "id": "bottom-ash", "name": "炉底渣处理", "shortName": "炉底渣", "systems": ["waste"], "x": 850, "y": 520, "function": "收集锅炉底部炉渣，经脱水、储存后进入合规处置或综合利用环节。", "inputs": ["炉底渣"], "outputs": ["可利用或待处置炉渣"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "fly-ash-silo", "name": "飞灰库", "shortName": "飞灰库", "systems": ["waste"], "x": 340, "y": 520, "function": "储存除尘器捕集的飞灰，并按质量和许可条件综合利用或处置。", "inputs": ["飞灰"], "outputs": ["外运飞灰"], "evidenceLevel": "public-general", "sourceIds": ["S01"] },
+    { "id": "gypsum", "name": "脱硫石膏", "shortName": "石膏", "systems": ["waste"], "x": 180, "y": 520, "function": "湿法脱硫副产物经脱水后可进入建材利用等合规去向。", "inputs": ["石膏浆液"], "outputs": ["脱水石膏"], "evidenceLevel": "public-general", "sourceIds": ["S01", "S02"] },
+    { "id": "wastewater", "name": "分类废水处理", "shortName": "废水处理", "systems": ["waste"], "x": 20, "y": 520, "function": "不同来源废水分类收集、处理和回用；图中不表达为未经处理直接排放。", "inputs": ["工业废水", "脱硫废水"], "outputs": ["回用水", "合规处置水"], "evidenceLevel": "public-plant", "sourceIds": ["S01", "S03"] },
+
+    { "id": "field-sensor", "name": "现场仪表与传感器", "shortName": "现场仪表", "systems": ["control"], "x": 80, "y": 635, "function": "把温度、压力、液位、振动等物理量转换为可采集信号。", "inputs": ["现场物理量"], "outputs": ["测量信号"], "evidenceLevel": "sanitized", "sourceIds": [] },
+    { "id": "io", "name": "I/O 与信号链路", "shortName": "I/O 链路", "systems": ["control"], "x": 330, "y": 635, "function": "完成现场信号接入、隔离、转换和传输；异常可能来自测点、线路、模块或组态。", "inputs": ["测量信号"], "outputs": ["控制系统数据"], "evidenceLevel": "sanitized", "sourceIds": [] },
+    { "id": "dcs", "name": "DCS 趋势与报警", "shortName": "DCS", "systems": ["control"], "x": 580, "y": 635, "function": "集中显示过程状态、历史趋势和报警，为人员判断提供证据。演示趋势全部使用合成数据。", "inputs": ["过程数据"], "outputs": ["趋势", "报警", "运行画面"], "evidenceLevel": "sanitized", "sourceIds": ["S03"] },
+    { "id": "work-order", "name": "工作票与隔离", "shortName": "工作票", "systems": ["control"], "x": 830, "y": 635, "function": "在检修前明确任务、风险、隔离和许可条件。原型只表达流程状态，不给出现场操作指令。", "inputs": ["异常判断", "检修需求"], "outputs": ["许可与隔离状态"], "evidenceLevel": "sanitized", "sourceIds": [] },
+    { "id": "maintenance", "name": "检修与更换", "shortName": "消缺执行", "systems": ["control"], "x": 1080, "y": 635, "function": "在许可条件下开展检查、清理、校验、修复或更换，并记录证据。", "inputs": ["许可状态", "故障证据"], "outputs": ["处理结果"], "evidenceLevel": "sanitized", "sourceIds": [] },
+    { "id": "verification", "name": "复测与闭环", "shortName": "复测闭环", "systems": ["control"], "x": 1330, "y": 635, "function": "通过复测、趋势观察和结果记录验证措施是否有效，并保留未解决问题。", "inputs": ["处理结果"], "outputs": ["关闭或继续跟踪"], "evidenceLevel": "sanitized", "sourceIds": [] }
+  ],
+  "edges": [
+    { "id": "fuel-01", "from": "coal-yard", "to": "conveyor", "system": "fuel", "medium": "原煤", "duration": 5 },
+    { "id": "fuel-02", "from": "conveyor", "to": "coal-mill", "system": "fuel", "medium": "破碎煤", "duration": 5 },
+    { "id": "fuel-03", "from": "coal-mill", "to": "boiler", "system": "fuel", "medium": "煤粉气流", "duration": 7, "via": [[700, 117]] },
+    { "id": "fuel-04", "from": "forced-draft-fan", "to": "air-preheater", "system": "fuel", "medium": "冷空气", "duration": 7, "via": [[623, 185], [573, 185]] },
+    { "id": "fuel-05", "from": "air-preheater", "to": "boiler", "system": "fuel", "medium": "热空气", "duration": 7, "via": [[650, 365], [650, 117]] },
+
+    { "id": "steam-01", "from": "condenser", "to": "condensate-pump", "system": "steam", "medium": "凝结水", "duration": 5 },
+    { "id": "steam-02", "from": "condensate-pump", "to": "low-pressure-heaters", "system": "steam", "medium": "凝结水", "duration": 5 },
+    { "id": "steam-03", "from": "low-pressure-heaters", "to": "deaerator", "system": "steam", "medium": "加热凝结水", "duration": 5 },
+    { "id": "steam-04", "from": "deaerator", "to": "feedwater-pump", "system": "steam", "medium": "除氧给水", "duration": 5 },
+    { "id": "steam-05", "from": "feedwater-pump", "to": "economizer", "system": "steam", "medium": "高压给水", "duration": 5 },
+    { "id": "steam-06", "from": "economizer", "to": "boiler", "system": "steam", "medium": "加热给水", "duration": 5 },
+    { "id": "steam-07", "from": "boiler", "to": "superheater", "system": "steam", "medium": "蒸汽", "duration": 5, "via": [[980, 117], [980, 272]] },
+    { "id": "steam-08", "from": "superheater", "to": "turbine", "system": "steam", "medium": "主汽/再热汽", "duration": 5 },
+    { "id": "steam-09", "from": "turbine", "to": "condenser", "system": "steam", "medium": "排汽/凝结回路", "duration": 13, "via": [[1263, 350], [113, 350]] },
+
+    { "id": "electric-01", "from": "turbine", "to": "generator", "system": "electric", "medium": "轴功率", "duration": 4 },
+    { "id": "electric-02", "from": "generator", "to": "transformer", "system": "electric", "medium": "电能", "duration": 4 },
+    { "id": "electric-03", "from": "transformer", "to": "grid", "system": "electric", "medium": "升压电能", "duration": 4 },
+
+    { "id": "flue-01", "from": "boiler", "to": "rear-heating", "system": "flue", "medium": "高温烟气", "duration": 5 },
+    { "id": "flue-02", "from": "rear-heating", "to": "scr", "system": "flue", "medium": "含 NOx 烟气", "duration": 5 },
+    { "id": "flue-03", "from": "scr", "to": "air-preheater", "system": "flue", "medium": "脱硝烟气", "duration": 5 },
+    { "id": "flue-04", "from": "air-preheater", "to": "dust-collector", "system": "flue", "medium": "含尘烟气", "duration": 5 },
+    { "id": "flue-05", "from": "dust-collector", "to": "fgd", "system": "flue", "medium": "低尘烟气", "duration": 5 },
+    { "id": "flue-06", "from": "fgd", "to": "stack", "system": "flue", "medium": "治理后烟气", "duration": 5 },
+
+    { "id": "waste-01", "from": "boiler", "to": "bottom-ash", "system": "waste", "medium": "炉底渣", "duration": 5 },
+    { "id": "waste-02", "from": "dust-collector", "to": "fly-ash-silo", "system": "waste", "medium": "飞灰", "duration": 5 },
+    { "id": "waste-03", "from": "fgd", "to": "gypsum", "system": "waste", "medium": "石膏浆液", "duration": 5 },
+    { "id": "waste-04", "from": "fgd", "to": "wastewater", "system": "waste", "medium": "脱硫废水", "duration": 6, "via": [[80, 427], [80, 547]] },
+
+    { "id": "control-01", "from": "field-sensor", "to": "io", "system": "control", "medium": "测量信号", "duration": 4 },
+    { "id": "control-02", "from": "io", "to": "dcs", "system": "control", "medium": "过程数据", "duration": 4 },
+    { "id": "control-03", "from": "dcs", "to": "work-order", "system": "control", "medium": "异常判断", "duration": 4 },
+    { "id": "control-04", "from": "work-order", "to": "maintenance", "system": "control", "medium": "许可状态", "duration": 4 },
+    { "id": "control-05", "from": "maintenance", "to": "verification", "system": "control", "medium": "处理结果", "duration": 4 }
+  ]
+}

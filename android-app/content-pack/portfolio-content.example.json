@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "version": "YYYY.MM / description",
+    "updatedAt": "YYYY-MM-DD"
+  },
+  "profile": {
+    "name": "你的公开名称",
+    "role": "你的方向",
+    "headline": "一句清晰的定位",
+    "summary": "只写可公开、已核实的简介。"
+  },
+  "capabilities": [
+    {
+      "title": "能力名称",
+      "detail": "说明你如何做，而不只是做过什么。",
+      "proof": "可公开的作品或证据"
+    }
+  ],
+  "works": [
+    {
+      "title": "作品名称",
+      "type": "交互项目 / 案例方法 / 学习成果",
+      "summary": "公开安全的作品摘要。",
+      "tags": "标签  ·  标签"
+    }
+  ],
+  "models": [
+    {
+      "id": "lowercase-stable-id",
+      "title": "模型名称",
+      "phase": "规划中 / 当前版本 / 素材待接入",
+      "summary": "模型用途、当前完成度和公开边界。"
+    }
+  ]
+}
