@@ -1,7 +1,7 @@
 {
   "meta": {
-    "version": "2026.07.6",
-    "updatedAt": "2026-07-23"
+    "version": "2026.07.7",
+    "updatedAt": "2026-07-24"
   },
   "profile": {
     "name": "我的仪控实习作品集",
@@ -27,7 +27,7 @@
       "identity",
       "internship",
       "responseLab",
-      "wishlist",
+      "evidenceSpace",
       "updates"
     ]
   },
@@ -93,44 +93,6 @@
         "最近两次读数变化率<0.002%/s"
       ],
       "boundary": "模型仅辅助判断；首次应用前应以标气验证当前设备，并复核样气流量、管路死体积、泄漏和传感器状态。"
-    }
-  ],
-  "wishlist": [
-    {
-      "id": "wish-growth-archive",
-      "horizon": "NOW",
-      "title": "建成可长期维护的个人成长档案",
-      "note": "让每一次学习都有证据、有版本、可回看"
-    },
-    {
-      "id": "wish-response-case",
-      "horizon": "NOW",
-      "title": "把响应等待问题做成完整产品案例",
-      "note": "从原始录像、采样、拟合走到现场复核"
-    },
-    {
-      "id": "wish-industrial-product",
-      "horizon": "NEXT",
-      "title": "独立完成一个可演示的工业数字化作品",
-      "note": "真正解决认知、巡检或复盘中的具体问题"
-    },
-    {
-      "id": "wish-product-data",
-      "horizon": "NEXT",
-      "title": "系统学习产品设计与数据分析",
-      "note": "让现场理解能够转化为清晰判断"
-    },
-    {
-      "id": "wish-real-scenes",
-      "horizon": "LIFETIME",
-      "title": "持续走进真实场景并保持敬畏",
-      "note": "不把模型当事实，不把工具当结论"
-    },
-    {
-      "id": "wish-year-letter",
-      "horizon": "LIFETIME",
-      "title": "每年留一份给未来自己的回顾",
-      "note": "记录改变、取舍、未完成与下一程"
     }
   ],
   "capabilities": [

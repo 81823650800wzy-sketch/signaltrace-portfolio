@@ -14,7 +14,7 @@ final class GeometricNavBar extends View {
         void onSelected(int index);
     }
 
-    private static final String[] LABELS = {"名片", "实习", "实验", "愿望", "更新"};
+    private static final String[] LABELS = {"我的", "现场", "数据", "轨迹", "更新"};
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
@@ -163,9 +163,13 @@ final class GeometricNavBar extends View {
             path.lineTo(x + 1 * unit, y + 2 * unit);
             path.lineTo(x + 8 * unit, y - 6 * unit);
         } else if (index == 3) {
-            path.moveTo(x, y + 7 * unit);
-            path.cubicTo(x - 13 * unit, y, x - 6 * unit, y - 8 * unit, x, y - 3 * unit);
-            path.cubicTo(x + 6 * unit, y - 8 * unit, x + 13 * unit, y, x, y + 7 * unit);
+            canvas.drawCircle(x - 6 * unit, y + 4 * unit, 2 * unit, paint);
+            canvas.drawCircle(x, y - 5 * unit, 2 * unit, paint);
+            canvas.drawCircle(x + 7 * unit, y + 2 * unit, 2 * unit, paint);
+            path.moveTo(x - 4 * unit, y + 2 * unit);
+            path.lineTo(x - 1 * unit, y - 3 * unit);
+            path.moveTo(x + 2 * unit, y - 4 * unit);
+            path.lineTo(x + 5 * unit, y);
         } else {
             RectF arc = new RectF(x - 7 * unit, y - 7 * unit, x + 7 * unit, y + 7 * unit);
             canvas.drawArc(arc, -60, 280, false, paint);

@@ -128,7 +128,7 @@ final class SignalSceneView extends View {
         paint.setTextSize(AppTheme.dp(getContext(), 10));
         paint.setColor(AppTheme.withAlpha(AppTheme.WHITE, 170));
         paint.setTextAlign(Paint.Align.LEFT);
-        canvas.drawText("SIGNAL / EVIDENCE / GROWTH", AppTheme.dp(getContext(), 16), AppTheme.dp(getContext(), 24), paint);
+        canvas.drawText("信号 · 证据 · 成长", AppTheme.dp(getContext(), 16), AppTheme.dp(getContext(), 24), paint);
         paint.setTextAlign(Paint.Align.RIGHT);
         paint.setColor(AppTheme.TEAL);
         canvas.drawText(String.format(java.util.Locale.US, "%03d", Math.round(phase * 999)), width - AppTheme.dp(getContext(), 16), AppTheme.dp(getContext(), 24), paint);
