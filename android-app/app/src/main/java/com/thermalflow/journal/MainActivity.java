@@ -38,9 +38,11 @@ import java.util.List;
 public class MainActivity extends Activity {
     private static final int IMPORT_CONTENT_REQUEST = 1001;
     private static final int ATTACH_MODEL_REQUEST = 1002;
+    private static final int ATTACH_MEDIA_REQUEST = 1003;
     private static final String PREFS_NAME = "portfolio_showcase";
     private static final String CONTENT_KEY = "portfolio_content";
     private static final String MODEL_URI_PREFIX = "model_uri_";
+    private static final String EVIDENCE_VIDEO_URI_KEY = "evidence_video_hydrogen_response";
     private static final int INK = Color.rgb(16, 23, 29);
     private static final int INK_SOFT = Color.rgb(30, 40, 48);
     private static final int MUTED = Color.rgb(91, 103, 103);
@@ -121,7 +123,7 @@ public class MainActivity extends Activity {
         LinearLayout nav = new LinearLayout(this);
         nav.setPadding(dp(6), dp(7), dp(6), dp(8));
         nav.setBackgroundColor(INK);
-        String[][] tabs = {{"名片", "profile"}, {"日志", "journal"}, {"成果", "work"}, {"模型", "models"}, {"更新", "update"}};
+        String[][] tabs = {{"名片", "profile"}, {"看板", "dashboard"}, {"日志", "journal"}, {"复盘", "evidence"}, {"成果", "work"}, {"更新", "update"}};
         for (String[] tab : tabs) {
             Button button = new Button(this);
             button.setText(tab[0]);
@@ -143,7 +145,9 @@ public class MainActivity extends Activity {
     private void renderPage() {
         body.removeAllViews();
         if ("profile".equals(activePage)) renderProfile();
+        if ("dashboard".equals(activePage)) renderDashboard();
         if ("journal".equals(activePage)) renderJournal();
+        if ("evidence".equals(activePage)) renderEvidence();
         if ("work".equals(activePage)) renderWork();
         if ("models".equals(activePage)) renderModels();
         if ("update".equals(activePage)) renderUpdate();
@@ -165,17 +169,41 @@ public class MainActivity extends Activity {
         addGap(22);
         body.addView(eyebrow("PORTFOLIO STATUS"));
         body.addView(statusStrip());
+        addGap(18);
+        body.addView(quickActionPanel());
+    }
+
+    private void renderDashboard() {
+        body.addView(eyebrow("FIELD INTELLIGENCE DASHBOARD"));
+        body.addView(heading("用数据、流程和证据看见实习进展"));
+        body.addView(paragraph("这里把日志、成果、产品案例和响应特性分析放进同一张看板。它不是生产监控，而是公开安全的学习证据总览。"), fullWidthTop(10));
+        body.addView(statusStrip(), fullWidthTop(18));
+        body.addView(categoryMatrix(), fullWidthTop(16));
+        body.addView(responseChartCard(), fullWidthTop(16));
+        body.addView(responseMetricsCard(), fullWidthTop(16));
+        body.addView(methodRail(), fullWidthTop(16));
     }
 
     private void renderJournal() {
         body.addView(eyebrow("FIELD JOURNAL / " + objects("journal").size() + " EVENTS"));
         body.addView(heading("真实日志与学习证据"));
         body.addView(paragraph("原始记录经过工作内容筛选和逐条脱敏。每条日志同时说明现场观察、本人参与、学习结论与产品信号。"), fullWidthTop(10));
+        body.addView(categoryMatrix(), fullWidthTop(16));
         int index = 0;
         for (JSONObject entry : objects("journal")) {
             body.addView(journalCard(entry, index), fullWidthTop(12));
             index++;
         }
+    }
+
+    private void renderEvidence() {
+        body.addView(eyebrow("EVIDENCE ROOM / RESPONSE + MEDIA"));
+        body.addView(heading("氢气纯度仪响应等待复盘"));
+        body.addView(paragraph("新增原始视频的本地证据入口、响应曲线和五步复盘流程。公开视频包只保存脱敏结论；原始视频通过系统文件选择器保留在本机。"), fullWidthTop(10));
+        body.addView(videoEvidenceCard(), fullWidthTop(18));
+        body.addView(responseChartCard(), fullWidthTop(16));
+        body.addView(responseDecisionCard(), fullWidthTop(16));
+        body.addView(evidenceFlowCard(), fullWidthTop(16));
     }
 
     private View hero(JSONObject profile) {
@@ -209,6 +237,9 @@ public class MainActivity extends Activity {
         addGap(24);
         body.addView(eyebrow("PRODUCT CASE"));
         for (JSONObject item : objects("productCases")) body.addView(productCaseCard(item), fullWidthTop(12));
+        addGap(24);
+        body.addView(eyebrow("MODEL + MEDIA"));
+        renderModels();
     }
 
     private void renderModels() {
@@ -462,6 +493,11 @@ public class MainActivity extends Activity {
             renderPage();
             Toast.makeText(this, "已关联离线模型文件", Toast.LENGTH_SHORT).show();
         }
+        if (requestCode == ATTACH_MEDIA_REQUEST) {
+            preferences.edit().putString(EVIDENCE_VIDEO_URI_KEY, uri.toString()).apply();
+            renderPage();
+            Toast.makeText(this, "已关联原始视频证据", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void importFromUri(Uri uri) {
@@ -490,6 +526,218 @@ public class MainActivity extends Activity {
         } catch (Exception error) {
             Toast.makeText(this, "设备上没有可打开该模型的应用", Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void attachEvidenceVideo() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("video/*");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        startActivityForResult(intent, ATTACH_MEDIA_REQUEST);
+    }
+
+    private void openEvidenceVideo(String rawUri) {
+        try {
+            Intent open = new Intent(Intent.ACTION_VIEW);
+            open.setDataAndType(Uri.parse(rawUri), "video/*");
+            open.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(open, "打开原始视频证据"));
+        } catch (Exception error) {
+            Toast.makeText(this, "设备上没有可打开该视频的应用", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private View quickActionPanel() {
+        LinearLayout card = card();
+        card.setBackground(tacticalShape(Color.rgb(246, 238, 197), INK, 14));
+        card.addView(text("QUICK ACTIONS", 10, INK, true));
+        card.addView(text("不只是阅读，还可以看曲线、进复盘、关联本地素材。", 15, INK, true), fullWidthTop(8));
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        Button dashboard = primaryButton("打开看板");
+        dashboard.setOnClickListener(view -> {
+            activePage = "dashboard";
+            setContentView(buildScreen());
+        });
+        row.addView(dashboard, new LinearLayout.LayoutParams(0, dp(42), 1));
+        Button evidence = secondaryButton("进入复盘");
+        evidence.setOnClickListener(view -> {
+            activePage = "evidence";
+            setContentView(buildScreen());
+        });
+        LinearLayout.LayoutParams evidenceParams = new LinearLayout.LayoutParams(0, dp(42), 1);
+        evidenceParams.setMargins(dp(8), 0, 0, 0);
+        row.addView(evidence, evidenceParams);
+        card.addView(row, fullWidthTop(14));
+        return card;
+    }
+
+    private View categoryMatrix() {
+        LinearLayout card = card();
+        card.addView(text("LEARNING TOPICS", 10, TEAL, true));
+        card.addView(text("学习主题分布", 18, INK, true), fullWidthTop(7));
+        String[][] groups = {
+                {"仪表/测量", "温度测量|压力测量|测量原理|分析仪表|响应特性"},
+                {"巡检/定位", "巡检|设备定位"},
+                {"趋势/系统", "DCS学习|异常排查|岗位认知"},
+                {"维护/规范", "维护约束|规范学习|液位测量|安全与入班"}
+        };
+        int total = Math.max(1, objects("journal").size());
+        for (String[] group : groups) {
+            int count = 0;
+            for (JSONObject entry : objects("journal")) {
+                if (group[1].contains(entry.optString("category"))) count++;
+            }
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.VERTICAL);
+            row.addView(text(group[0] + "  " + count + "/" + total, 12, INK, true));
+            row.addView(progressBar(count, total, group[0].contains("仪表") ? TEAL : group[0].contains("巡检") ? AMBER : group[0].contains("趋势") ? RED : INK), fullWidthTop(6));
+            card.addView(row, fullWidthTop(12));
+        }
+        return card;
+    }
+
+    private View progressBar(int value, int total, int color) {
+        FrameLayout wrap = new FrameLayout(this);
+        wrap.setBackground(tacticalShape(Color.rgb(232, 237, 235), BORDER, 5));
+        View fill = new View(this);
+        fill.setBackground(tacticalShape(color, color, 5));
+        int width = Math.max(dp(28), (int) (getResources().getDisplayMetrics().widthPixels * 0.72f * value / Math.max(1, total)));
+        wrap.addView(fill, new FrameLayout.LayoutParams(width, dp(12)));
+        return wrap;
+    }
+
+    private View responseChartCard() {
+        LinearLayout card = card();
+        card.setBackground(tacticalShape(INK, TEAL, 16));
+        card.addView(text("RESPONSE CURVE", 10, TEAL, true));
+        card.addView(text("等待稳定不是玄学，是一条可记录的曲线", 19, Color.WHITE, true), fullWidthTop(7));
+        TextView note = text("95%标气由低向高趋稳；90%标气变化量小，所以体感更快。曲线为脱敏学习表达，不替代正式校验。", 12, Color.rgb(200, 213, 211), false);
+        note.setLineSpacing(dp(4), 1f);
+        card.addView(note, fullWidthTop(8));
+        ResponseCurveView chart = new ResponseCurveView(this);
+        card.addView(chart, new LinearLayout.LayoutParams(-1, dp(220)));
+        return card;
+    }
+
+    private View responseMetricsCard() {
+        LinearLayout card = card();
+        card.setBackground(tacticalShape(Color.WHITE, RED, 14));
+        card.addView(text("KEY RESPONSE FINDINGS", 10, RED, true));
+        String[][] metrics = {
+                {"95%组", "双指数拟合 R² 0.9995", "快/慢过程并存，需更长观察"},
+                {"90%组", "单指数拟合 R² 0.9978", "变化量小，体感更快稳定"},
+                {"等待策略", "30-150秒场景化判断", "先验证设备条件，再缩短等待"}
+        };
+        for (String[] item : metrics) {
+            LinearLayout row = new LinearLayout(this);
+            row.setPadding(0, dp(10), 0, dp(10));
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            TextView key = pill(item[0], item[0].contains("90") ? AMBER : item[0].contains("策略") ? TEAL : RED);
+            row.addView(key, new LinearLayout.LayoutParams(dp(78), -2));
+            LinearLayout copy = new LinearLayout(this);
+            copy.setOrientation(LinearLayout.VERTICAL);
+            copy.addView(text(item[1], 14, INK, true));
+            copy.addView(text(item[2], 12, MUTED, false), fullWidthTop(3));
+            LinearLayout.LayoutParams copyParams = new LinearLayout.LayoutParams(0, -2, 1);
+            copyParams.setMargins(dp(10), 0, 0, 0);
+            row.addView(copy, copyParams);
+            card.addView(row);
+        }
+        return card;
+    }
+
+    private View videoEvidenceCard() {
+        LinearLayout card = card();
+        card.setBackground(tacticalShape(Color.rgb(246, 238, 197), INK, 16));
+        card.addView(text("LOCAL MEDIA EVIDENCE", 10, INK, true));
+        card.addView(text("原始视频只在本机保留", 20, INK, true), fullWidthTop(8));
+        card.addView(paragraph("通过系统文件选择器关联录像。App只保存本机文件URI，不上传视频、不写入公开内容包。"), fullWidthTop(8));
+        String uri = preferences.getString(EVIDENCE_VIDEO_URI_KEY, "");
+        TextView status = text(uri.isEmpty() ? "尚未关联原始视频" : "已关联原始视频证据", 12, uri.isEmpty() ? MUTED : TEAL, true);
+        card.addView(status, fullWidthTop(14));
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        Button attach = primaryButton(uri.isEmpty() ? "关联原始视频" : "更换视频");
+        attach.setOnClickListener(view -> attachEvidenceVideo());
+        row.addView(attach, new LinearLayout.LayoutParams(0, dp(42), 1));
+        if (!uri.isEmpty()) {
+            Button open = secondaryButton("打开");
+            open.setOnClickListener(view -> openEvidenceVideo(uri));
+            LinearLayout.LayoutParams openParams = new LinearLayout.LayoutParams(dp(82), dp(42));
+            openParams.setMargins(dp(8), 0, 0, 0);
+            row.addView(open, openParams);
+        }
+        card.addView(row, fullWidthTop(14));
+        return card;
+    }
+
+    private View responseDecisionCard() {
+        LinearLayout card = card();
+        card.addView(text("STOP-WAIT DECISION", 10, TEAL, true));
+        card.addView(text("停止等待必须同时看两个条件", 18, INK, true), fullWidthTop(7));
+        String[][] rules = {
+                {"A", "预测值连续收敛", "连续拟合的稳定值变化足够小"},
+                {"B", "变化速率足够小", "最近读数变化已接近平衡"},
+                {"边界", "仍需现场复核", "模型只辅助判断，不替代规程"}
+        };
+        for (String[] rule : rules) {
+            LinearLayout item = new LinearLayout(this);
+            item.setGravity(Gravity.CENTER_VERTICAL);
+            TextView badge = text(rule[0], 16, Color.WHITE, true);
+            badge.setGravity(Gravity.CENTER);
+            badge.setBackground(tacticalShape(rule[0].equals("边界") ? RED : TEAL, Color.TRANSPARENT, 8));
+            item.addView(badge, new LinearLayout.LayoutParams(dp(48), dp(48)));
+            LinearLayout copy = new LinearLayout(this);
+            copy.setOrientation(LinearLayout.VERTICAL);
+            copy.addView(text(rule[1], 15, INK, true));
+            copy.addView(text(rule[2], 12, MUTED, false), fullWidthTop(3));
+            LinearLayout.LayoutParams copyParams = new LinearLayout.LayoutParams(0, -2, 1);
+            copyParams.setMargins(dp(12), 0, 0, 0);
+            item.addView(copy, copyParams);
+            card.addView(item, fullWidthTop(12));
+        }
+        return card;
+    }
+
+    private View evidenceFlowCard() {
+        LinearLayout card = card();
+        card.setBackground(tacticalShape(Color.WHITE, AMBER, 16));
+        card.addView(text("EVIDENCE FLOW", 10, AMBER, true));
+        card.addView(text("从录像到公开复盘的五步链路", 18, INK, true), fullWidthTop(7));
+        String[] steps = {"现场发现等待偏长", "录像保留读数变化", "整理时间-读数数据", "指数拟合与残差检查", "只发布脱敏结论"};
+        for (int index = 0; index < steps.length; index++) {
+            LinearLayout row = new LinearLayout(this);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            TextView number = text(String.format(java.util.Locale.US, "%02d", index + 1), 12, INK, true);
+            number.setGravity(Gravity.CENTER);
+            number.setBackground(tacticalShape(index == steps.length - 1 ? TEAL : AMBER, Color.TRANSPARENT, 5));
+            row.addView(number, new LinearLayout.LayoutParams(dp(42), dp(34)));
+            TextView label = text(steps[index], 13, INK, true);
+            LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(0, -2, 1);
+            labelParams.setMargins(dp(10), 0, 0, 0);
+            row.addView(label, labelParams);
+            card.addView(row, fullWidthTop(9));
+        }
+        return card;
+    }
+
+    private View methodRail() {
+        LinearLayout card = card();
+        card.addView(text("METHOD RAIL", 10, TEAL, true));
+        String[] methods = {"观察现场", "追踪链路", "校验证据", "转成产品"};
+        LinearLayout rail = new LinearLayout(this);
+        rail.setOrientation(LinearLayout.HORIZONTAL);
+        for (int index = 0; index < methods.length; index++) {
+            TextView item = text(methods[index], 12, index == 1 ? Color.WHITE : INK, true);
+            item.setGravity(Gravity.CENTER);
+            item.setBackground(tacticalShape(index == 1 ? INK : index == 2 ? AMBER : TEAL, Color.TRANSPARENT, 8));
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(54), 1);
+            if (index > 0) params.setMargins(dp(6), 0, 0, 0);
+            rail.addView(item, params);
+        }
+        card.addView(rail, fullWidthTop(12));
+        return card;
     }
 
     private void copyTemplate() {
@@ -616,6 +864,81 @@ public class MainActivity extends Activity {
 
     private int dp(int value) {
         return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private static class ResponseCurveView extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final float[] highTimes = {0, 10, 20, 30, 50, 80, 115, 150, 194, 244};
+        private final float[] highValues = {93.20f, 93.63f, 93.91f, 94.06f, 94.20f, 94.30f, 94.38f, 94.45f, 94.51f, 94.55f};
+        private final float[] lowTimes = {0, 10, 20, 30, 45, 62, 82, 117, 160, 282};
+        private final float[] lowValues = {90.42f, 90.32f, 90.24f, 90.19f, 90.13f, 90.09f, 90.06f, 90.03f, 90.01f, 89.99f};
+
+        ResponseCurveView(Context context) {
+            super(context);
+            setMinimumHeight(220);
+            textPaint.setTextSize(24f);
+            textPaint.setFakeBoldText(true);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float width = getWidth();
+            float height = getHeight();
+            float left = 34f;
+            float top = 24f;
+            float right = width - 18f;
+            float bottom = height - 38f;
+
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(Color.rgb(30, 40, 48));
+            canvas.drawRect(0, 0, width, height, paint);
+
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(2f);
+            paint.setColor(Color.rgb(79, 94, 101));
+            for (int i = 0; i <= 4; i++) {
+                float y = top + (bottom - top) * i / 4f;
+                canvas.drawLine(left, y, right, y, paint);
+            }
+            canvas.drawLine(left, bottom, right, bottom, paint);
+            canvas.drawLine(left, top, left, bottom, paint);
+
+            drawCurve(canvas, highTimes, highValues, left, top, right, bottom, 93.1f, 94.7f, Color.rgb(59, 193, 183));
+            drawCurve(canvas, lowTimes, lowValues, left, top, right, bottom, 89.9f, 90.5f, Color.rgb(244, 200, 74));
+
+            textPaint.setColor(Color.rgb(59, 193, 183));
+            canvas.drawText("95% response", left + 6f, top + 24f, textPaint);
+            textPaint.setColor(Color.rgb(244, 200, 74));
+            canvas.drawText("90% response", left + 6f, top + 54f, textPaint);
+            textPaint.setColor(Color.rgb(190, 203, 201));
+            textPaint.setTextSize(20f);
+            canvas.drawText("time -> stable reading", left + 6f, height - 12f, textPaint);
+            textPaint.setTextSize(24f);
+        }
+
+        private void drawCurve(Canvas canvas, float[] times, float[] values, float left, float top, float right, float bottom, float minValue, float maxValue, int color) {
+            Path path = new Path();
+            for (int i = 0; i < times.length; i++) {
+                float x = left + (right - left) * times[i] / 300f;
+                float normalized = (values[i] - minValue) / Math.max(0.01f, maxValue - minValue);
+                float y = bottom - (bottom - top) * normalized;
+                if (i == 0) path.moveTo(x, y);
+                else path.lineTo(x, y);
+            }
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(5f);
+            paint.setColor(color);
+            canvas.drawPath(path, paint);
+            paint.setStyle(Paint.Style.FILL);
+            for (int i = 0; i < times.length; i++) {
+                float x = left + (right - left) * times[i] / 300f;
+                float normalized = (values[i] - minValue) / Math.max(0.01f, maxValue - minValue);
+                float y = bottom - (bottom - top) * normalized;
+                canvas.drawCircle(x, y, 5f, paint);
+            }
+        }
     }
 
     private static class TacticalDrawable extends Drawable {
