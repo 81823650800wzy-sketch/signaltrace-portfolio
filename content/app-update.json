@@ -11,13 +11,13 @@
     "sizeBytes": 16603
   },
   "apk": {
-    "url": "https://github.com/81823650800wzy-sketch/signaltrace-portfolio/releases/download/v0.8.0/SignalTrace-v0.8.0.apk",
+    "url": "https://81823650800wzy-sketch.github.io/signaltrace-portfolio/downloads/SignalTrace-v0.8.0.apk",
     "sha256": "97e58988980d0121eda35e68b88c753e7623af9481584a8dff9cb3340875135a",
     "sizeBytes": 2000144
   },
-  "apkUrl": "https://github.com/81823650800wzy-sketch/signaltrace-portfolio/releases/download/v0.8.0/SignalTrace-v0.8.0.apk",
+  "apkUrl": "https://81823650800wzy-sketch.github.io/signaltrace-portfolio/downloads/SignalTrace-v0.8.0.apk",
   "apkSha256": "97e58988980d0121eda35e68b88c753e7623af9481584a8dff9cb3340875135a",
-  "releasePageUrl": "https://github.com/81823650800wzy-sketch/signaltrace-portfolio/releases/tag/v0.8.0",
+  "releasePageUrl": "https://81823650800wzy-sketch.github.io/signaltrace-portfolio/",
   "releaseNotes": "0.8.0 重构五个个人空间：移除愿望界面，新增可旋转缩放的响应数据空间与现场证据轨迹；加入全界面横向滑屏、浮动按键、数据点选联动、沉浸模式和本地个性称呼；精简界面文案，并继续保留启动异常恢复与分层校验更新。",
   "publishedAt": "2026-07-24"
 }

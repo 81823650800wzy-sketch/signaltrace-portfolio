@@ -59,6 +59,6 @@ Android App启动时和系统定时任务会从HTTPS地址读取版本清单：
 - `content/portfolio.json`：公开成长资源包，包含身份、实习、实验、作品、证据轨迹与模型入口。
 - `content/app-update.json`：声明资源包和APK的版本、地址、大小与SHA-256摘要。
 
-资源包先下载到`staging`，通过摘要和结构验证后才原子替换`active`；断网、校验失败或更新中断均继续使用最后成功版本。APK能力包也会在App内下载并校验，但受Android安全模型约束，最终安装必须由用户确认。本地视频和个性称呼不进入公开更新包。
+资源包先下载到`staging`，通过摘要和结构验证后才原子替换`active`；断网、校验失败或更新中断均继续使用最后成功版本。APK能力包由GitHub Pages同域分发，在App内下载并校验，但受Android安全模型约束，最终安装必须由用户确认。本地视频和个性称呼不进入公开更新包。
 
 详见[架构说明](docs/ARCHITECTURE.md)、[内容发布流程](docs/CONTENT_RELEASE.md)、[GitHub Pages设置](docs/GITHUB_PAGES_SETUP.md)和[阅读指南](docs/COMPANY_REVIEW_GUIDE.md)。
