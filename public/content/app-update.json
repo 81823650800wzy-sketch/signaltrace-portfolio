@@ -1,9 +1,9 @@
 {
-  "versionCode": 5,
-  "versionName": "0.5.0",
+  "versionCode": 6,
+  "versionName": "0.6.0",
   "minimumSupportedVersionCode": 1,
   "apkUrl": "",
   "releasePageUrl": "https://github.com/81823650800wzy-sketch/signaltrace-portfolio/releases/latest",
-  "releaseNotes": "App新增看板、响应曲线、证据复盘流程和原始视频本地关联入口，丰富16条实习证据的展示形式。",
+  "releaseNotes": "App新增在线作品集Shell，支持界面排版和内容形式随网站整体更新；保留原生离线档案、看板、复盘和本地视频入口。",
   "publishedAt": "2026-07-23"
 }

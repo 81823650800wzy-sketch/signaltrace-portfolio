@@ -2,4 +2,5 @@
 <resources>
     <string name="portfolio_content_url" translatable="false">https://81823650800wzy-sketch.github.io/signaltrace-portfolio/content/portfolio.json</string>
     <string name="app_update_manifest_url" translatable="false">https://81823650800wzy-sketch.github.io/signaltrace-portfolio/content/app-update.json</string>
+    <string name="portfolio_shell_url" translatable="false">https://81823650800wzy-sketch.github.io/signaltrace-portfolio/</string>
 </resources>

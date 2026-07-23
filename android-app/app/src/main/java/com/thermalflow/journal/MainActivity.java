@@ -19,6 +19,11 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -55,7 +60,7 @@ public class MainActivity extends Activity {
     private SharedPreferences preferences;
     private JSONObject contentPack;
     private LinearLayout body;
-    private String activePage = "profile";
+    private String activePage = "online";
     private String pendingModelId;
 
     @Override
@@ -75,16 +80,20 @@ public class MainActivity extends Activity {
 
         root.addView(buildTopBar());
 
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
-        body = new LinearLayout(this);
-        body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(dp(14), dp(14), dp(14), dp(28));
-        scroll.addView(body);
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        if ("online".equals(activePage)) {
+            root.addView(buildOnlineShell(), new LinearLayout.LayoutParams(-1, 0, 1));
+        } else {
+            ScrollView scroll = new ScrollView(this);
+            scroll.setFillViewport(true);
+            body = new LinearLayout(this);
+            body.setOrientation(LinearLayout.VERTICAL);
+            body.setPadding(dp(14), dp(14), dp(14), dp(28));
+            scroll.addView(body);
+            root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        }
 
         root.addView(buildNavigation());
-        renderPage();
+        if (!"online".equals(activePage)) renderPage();
         return root;
     }
 
@@ -107,12 +116,12 @@ public class MainActivity extends Activity {
         copy.setOrientation(LinearLayout.VERTICAL);
         copy.setPadding(dp(10), 0, 0, 0);
         TextView title = text("SIGNALTRACE / FIELD ARCHIVE", 13, Color.WHITE, true);
-        TextView subtitle = text("仪控实习证据 · 产品案例 · 离线可用", 10, Color.rgb(155, 167, 164), false);
+        TextView subtitle = text("在线大更新 · 原生离线兜底 · 本地证据", 10, Color.rgb(155, 167, 164), false);
         copy.addView(title);
         copy.addView(subtitle);
         bar.addView(copy, new LinearLayout.LayoutParams(0, -2, 1));
 
-        TextView offline = text("OFFLINE", 10, TEAL, true);
+        TextView offline = text("LIVE", 10, TEAL, true);
         offline.setPadding(dp(9), dp(5), dp(9), dp(5));
         offline.setBackground(tacticalShape(INK_SOFT, TEAL, 6));
         bar.addView(offline);
@@ -123,7 +132,7 @@ public class MainActivity extends Activity {
         LinearLayout nav = new LinearLayout(this);
         nav.setPadding(dp(6), dp(7), dp(6), dp(8));
         nav.setBackgroundColor(INK);
-        String[][] tabs = {{"名片", "profile"}, {"看板", "dashboard"}, {"日志", "journal"}, {"复盘", "evidence"}, {"成果", "work"}, {"更新", "update"}};
+        String[][] tabs = {{"在线", "online"}, {"档案", "profile"}, {"看板", "dashboard"}, {"复盘", "evidence"}, {"更新", "update"}};
         for (String[] tab : tabs) {
             Button button = new Button(this);
             button.setText(tab[0]);
@@ -151,6 +160,80 @@ public class MainActivity extends Activity {
         if ("work".equals(activePage)) renderWork();
         if ("models".equals(activePage)) renderModels();
         if ("update".equals(activePage)) renderUpdate();
+    }
+
+    private View buildOnlineShell() {
+        FrameLayout shell = new FrameLayout(this);
+        shell.setBackgroundColor(INK);
+
+        WebView webView = new WebView(this);
+        WebSettings settings = webView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setBuiltInZoomControls(false);
+        settings.setDisplayZoomControls(false);
+        settings.setLoadWithOverviewMode(true);
+        settings.setUseWideViewPort(true);
+        webView.setBackgroundColor(SURFACE);
+        shell.addView(webView, new FrameLayout.LayoutParams(-1, -1));
+
+        LinearLayout fallback = onlineFallback();
+        fallback.setVisibility(View.GONE);
+        shell.addView(fallback, new FrameLayout.LayoutParams(-1, -1));
+
+        String shellUrl = getString(R.string.portfolio_shell_url);
+        String allowedHost = Uri.parse(shellUrl).getHost();
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri uri = request.getUrl();
+                if ("https".equals(uri.getScheme()) && allowedHost != null && allowedHost.equals(uri.getHost())) return false;
+                openWebUrl(uri.toString());
+                return true;
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                fallback.setVisibility(View.GONE);
+                webView.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (request.isForMainFrame()) {
+                    webView.setVisibility(View.GONE);
+                    fallback.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+        webView.loadUrl(shellUrl);
+        return shell;
+    }
+
+    private LinearLayout onlineFallback() {
+        LinearLayout fallback = new LinearLayout(this);
+        fallback.setOrientation(LinearLayout.VERTICAL);
+        fallback.setGravity(Gravity.CENTER);
+        fallback.setPadding(dp(18), dp(18), dp(18), dp(18));
+        fallback.setBackgroundColor(SURFACE);
+
+        LinearLayout card = card();
+        card.setBackground(tacticalShape(Color.rgb(246, 238, 197), INK, 18));
+        card.addView(text("ONLINE SHELL UNAVAILABLE", 10, RED, true));
+        card.addView(text("当前无法加载在线作品集", 24, INK, true), fullWidthTop(8));
+        card.addView(paragraph("在线Shell负责承载大版式和交互更新。网络不可用时，可以进入原生离线档案继续查看缓存内容、响应曲线和本地视频证据。"), fullWidthTop(8));
+        Button offline = primaryButton("进入原生离线档案");
+        offline.setOnClickListener(view -> {
+            activePage = "profile";
+            setContentView(buildScreen());
+        });
+        card.addView(offline, fullWidthTop(16));
+        Button retry = secondaryButton("重试在线加载");
+        retry.setOnClickListener(view -> setContentView(buildScreen()));
+        card.addView(retry, fullWidthTop(10));
+        fallback.addView(card, new LinearLayout.LayoutParams(-1, -2));
+        return fallback;
     }
 
     private void renderProfile() {
@@ -250,9 +333,13 @@ public class MainActivity extends Activity {
     }
 
     private void renderUpdate() {
-        body.addView(eyebrow("NETWORK UPDATE + OFFLINE CACHE"));
-        body.addView(heading("自动获取公开更新，断网继续访问"));
-        body.addView(paragraph("App 启动时和系统定时任务会检查公开 HTTPS 内容地址。验证通过后保存为新的离线缓存；网络异常不会清空最后一次成功内容。"), fullWidthTop(10));
+        body.addView(eyebrow("LIVE SHELL + CONTENT + APK"));
+        body.addView(heading("支持界面排版与内容形式的大更新"));
+        body.addView(paragraph("在线作品集Shell承载大版式、交互和内容形态更新；原生离线档案保留缓存、本地视频和基础证据查看；APK只在需要新增系统能力时升级。"), fullWidthTop(10));
+
+        body.addView(updateLayerCard("01", "在线Shell更新", "网站部署后，App内在线首页、产品案例和流程实验室的版式与交互可整体变化。", TEAL), fullWidthTop(16));
+        body.addView(updateLayerCard("02", "离线内容包更新", "portfolio.json继续同步结构化日志、成果、模型入口和发布说明，断网时保留最后成功版本。", AMBER), fullWidthTop(10));
+        body.addView(updateLayerCard("03", "APK能力更新", "只有新增WebView容器、本地视频、文件权限等系统能力时才需要安装新版本。", RED), fullWidthTop(10));
 
         Button syncButton = primaryButton("立即检查网络更新");
         syncButton.setOnClickListener(view -> syncNow(true));
@@ -289,6 +376,26 @@ public class MainActivity extends Activity {
             body.addView(versionButton, fullWidthTop(16));
             body.addView(paragraph(preferences.getString(PortfolioSync.UPDATE_NOTES_KEY, "发布页提供更新说明与安装包。")), fullWidthTop(8));
         }
+    }
+
+    private View updateLayerCard(String index, String title, String detail, int color) {
+        LinearLayout card = card();
+        card.setBackground(tacticalShape(Color.WHITE, color, 12));
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        TextView number = text(index, 12, INK, true);
+        number.setGravity(Gravity.CENTER);
+        number.setBackground(tacticalShape(color, Color.TRANSPARENT, 6));
+        row.addView(number, new LinearLayout.LayoutParams(dp(44), dp(38)));
+        LinearLayout copy = new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.addView(text(title, 15, INK, true));
+        copy.addView(text(detail, 12, MUTED, false), fullWidthTop(4));
+        LinearLayout.LayoutParams copyParams = new LinearLayout.LayoutParams(0, -2, 1);
+        copyParams.setMargins(dp(10), 0, 0, 0);
+        row.addView(copy, copyParams);
+        card.addView(row);
+        return card;
     }
 
     private void syncNow(boolean showFeedback) {
