@@ -14,6 +14,10 @@ const [manifestBytes, contentBytes] = await Promise.all([
 ]);
 const manifest = JSON.parse(manifestBytes.toString("utf8"));
 const portfolio = JSON.parse(contentBytes.toString("utf8"));
+const canonicalContentBytes = Buffer.from(
+  contentBytes.toString("utf8").replace(/\r\n/g, "\n"),
+  "utf8",
+);
 
 const fail = (message) => {
   throw new Error(`App update manifest: ${message}`);
@@ -30,8 +34,12 @@ if (!Number.isInteger(manifest.versionCode) || manifest.versionCode < 1) fail("v
 if (!manifest.versionName) fail("versionName is required");
 if (!manifest.contentPack || !manifest.apk) fail("contentPack and apk sections are required");
 if (manifest.contentPack.version !== portfolio.meta.version) fail("contentPack.version must match portfolio.meta.version");
-if (manifest.contentPack.sizeBytes !== contentBytes.length) fail("contentPack.sizeBytes does not match portfolio.json");
-if (manifest.contentPack.sha256 !== sha256(contentBytes)) fail("contentPack.sha256 does not match portfolio.json");
+if (manifest.contentPack.sizeBytes !== canonicalContentBytes.length) {
+  fail("contentPack.sizeBytes does not match canonical LF portfolio.json");
+}
+if (manifest.contentPack.sha256 !== sha256(canonicalContentBytes)) {
+  fail("contentPack.sha256 does not match canonical LF portfolio.json");
+}
 requireHttps(manifest.contentPack.url, "contentPack.url");
 requireHttps(manifest.apk.url, "apk.url");
 requireHttps(manifest.releasePageUrl, "releasePageUrl");

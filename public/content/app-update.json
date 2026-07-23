@@ -7,8 +7,8 @@
   "contentPack": {
     "version": "2026.07.6",
     "url": "https://81823650800wzy-sketch.github.io/signaltrace-portfolio/content/portfolio.json",
-    "sha256": "f73ca555d95e968d76db35d9e13fb218fdbf3fd885eae8b940d920c51645b49b",
-    "sizeBytes": 18195
+    "sha256": "03f91b329b157e4a2cfcc725384991fa930e449dd8124bef4727e89a7167e413",
+    "sizeBytes": 17819
   },
   "apk": {
     "url": "https://github.com/81823650800wzy-sketch/signaltrace-portfolio/releases/download/v0.7.1/SignalTrace-v0.7.1.apk",
