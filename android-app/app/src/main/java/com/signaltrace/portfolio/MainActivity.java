@@ -16,8 +16,6 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
-import android.view.WindowInsets;
-import android.view.WindowInsetsController;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -30,9 +28,10 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.text.SimpleDateFormat;
+import java.io.File;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -41,6 +40,9 @@ public final class MainActivity extends Activity {
     private static final int ATTACH_MEDIA_REQUEST = 4002;
     private static final String VIDEO_URI_KEY = "hydrogen_response_video";
     private static final String CUSTOM_WISHES_KEY = "custom_wishes";
+    private static final String DIAGNOSTIC_PREFS = "signaltrace_diagnostics";
+    private static final String CRASH_PENDING_KEY = "crash_pending";
+    private static final String CRASH_TRACE_KEY = "crash_trace";
 
     private ContentStore contentStore;
     private UpdateManager updateManager;
@@ -58,27 +60,204 @@ public final class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        installCrashRecorder();
+        String previousCrash = getSharedPreferences(DIAGNOSTIC_PREFS, MODE_PRIVATE)
+            .getString(CRASH_TRACE_KEY, "");
+        boolean recoveryRequired = getSharedPreferences(DIAGNOSTIC_PREFS, MODE_PRIVATE)
+            .getBoolean(CRASH_PENDING_KEY, false);
+        if (recoveryRequired) {
+            showRecoveryScreen("检测到上次启动异常", previousCrash);
+            return;
+        }
+        try {
+            startFullExperience();
+        } catch (Throwable error) {
+            String trace = recordCrash(error);
+            showRecoveryScreen("完整界面启动失败", trace);
+        }
+    }
+
+    private void startFullExperience() {
         configureWindow();
         contentStore = new ContentStore(this);
         updateManager = new UpdateManager(this, contentStore);
-        setContentView(buildShell());
+        View shell = buildShell();
+        setContentView(shell);
         showDestination(0, false);
-        PortfolioSyncJobService.schedule(this);
+        shell.postDelayed(this::markStartupHealthy, 1800);
+        try {
+            PortfolioSyncJobService.schedule(this);
+        } catch (RuntimeException error) {
+            android.util.Log.w("SignalTrace", "Background sync scheduling unavailable", error);
+        }
         checkForUpdates(false);
+    }
+
+    private void installCrashRecorder() {
+        Thread.UncaughtExceptionHandler previous = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((thread, error) -> {
+            recordCrash(error);
+            if (previous != null) previous.uncaughtException(thread, error);
+        });
+    }
+
+    private String recordCrash(Throwable error) {
+        StringWriter writer = new StringWriter();
+        error.printStackTrace(new PrintWriter(writer));
+        String trace = writer.toString();
+        getSharedPreferences(DIAGNOSTIC_PREFS, MODE_PRIVATE)
+            .edit()
+            .putBoolean(CRASH_PENDING_KEY, true)
+            .putString(CRASH_TRACE_KEY, trace)
+            .commit();
+        android.util.Log.e("SignalTrace", "Runtime failure", error);
+        return trace;
+    }
+
+    private void markStartupHealthy() {
+        getSharedPreferences(DIAGNOSTIC_PREFS, MODE_PRIVATE)
+            .edit()
+            .putBoolean(CRASH_PENDING_KEY, false)
+            .remove(CRASH_TRACE_KEY)
+            .apply();
+    }
+
+    private void showRecoveryScreen(String reason, String trace) {
+        getWindow().setStatusBarColor(Color.rgb(13, 17, 20));
+        getWindow().setNavigationBarColor(Color.rgb(13, 17, 20));
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(rawDp(22), rawDp(28), rawDp(22), rawDp(28));
+        body.setBackgroundColor(Color.rgb(238, 239, 233));
+
+        TextView label = recoveryText("SIGNALTRACE / SAFE START", 12, Color.rgb(238, 82, 68), true);
+        body.addView(label);
+        TextView title = recoveryText("App 已进入恢复模式", 27, Color.rgb(13, 17, 20), true);
+        body.addView(title, recoveryTop(10));
+        TextView detail = recoveryText(
+            reason + "。你的本地视频和愿望状态仍会保留；下面可以先重试，或只清理可重新下载的内容缓存。",
+            14,
+            Color.rgb(38, 45, 49),
+            false
+        );
+        body.addView(detail, recoveryTop(10));
+
+        TextView version = recoveryText(
+            "APP " + BuildConfig.VERSION_NAME + " / Android " + android.os.Build.VERSION.RELEASE
+                + " / API " + android.os.Build.VERSION.SDK_INT,
+            11,
+            Color.rgb(91, 103, 103),
+            true
+        );
+        body.addView(version, recoveryTop(18));
+
+        TextView retry = recoveryAction("重试完整体验", Color.rgb(246, 184, 46), Color.rgb(13, 17, 20));
+        retry.setOnClickListener(view -> {
+            clearCrashMarker();
+            recreate();
+        });
+        body.addView(retry, recoveryTop(18));
+
+        TextView clearCache = recoveryAction("清理成长包缓存并重试", Color.rgb(23, 29, 33), Color.WHITE);
+        clearCache.setOnClickListener(view -> {
+            clearDownloadableContent();
+            clearCrashMarker();
+            recreate();
+        });
+        body.addView(clearCache, recoveryTop(9));
+
+        TextView copy = recoveryAction("复制诊断信息", Color.rgb(50, 205, 190), Color.rgb(13, 17, 20));
+        copy.setOnClickListener(view -> {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            clipboard.setPrimaryClip(ClipData.newPlainText("SignalTrace crash", trace));
+            Toast.makeText(this, "诊断信息已复制", Toast.LENGTH_SHORT).show();
+        });
+        body.addView(copy, recoveryTop(9));
+
+        TextView diagnostic = recoveryText(
+            trace == null || trace.trim().isEmpty()
+                ? "尚未记录到Java异常。若仍无法进入，请截取系统提示并连接USB调试。"
+                : abbreviateTrace(trace),
+            10,
+            Color.rgb(218, 220, 214),
+            false
+        );
+        diagnostic.setPadding(rawDp(14), rawDp(14), rawDp(14), rawDp(14));
+        diagnostic.setTextIsSelectable(true);
+        diagnostic.setBackgroundColor(Color.rgb(23, 29, 33));
+        body.addView(diagnostic, recoveryTop(18));
+        scroll.addView(body);
+        setContentView(scroll);
+    }
+
+    private TextView recoveryText(String value, float size, int color, boolean bold) {
+        TextView view = new TextView(this);
+        view.setText(value);
+        view.setTextSize(size);
+        view.setTextColor(color);
+        view.setTypeface(android.graphics.Typeface.create(
+            bold ? "sans-serif-condensed" : "sans-serif",
+            bold ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL
+        ));
+        view.setLineSpacing(0f, 1.12f);
+        return view;
+    }
+
+    private TextView recoveryAction(String value, int fill, int textColor) {
+        TextView view = recoveryText(value, 13, textColor, true);
+        view.setGravity(Gravity.CENTER);
+        view.setMinHeight(rawDp(48));
+        view.setPadding(rawDp(14), rawDp(10), rawDp(14), rawDp(10));
+        android.graphics.drawable.GradientDrawable background = new android.graphics.drawable.GradientDrawable();
+        background.setColor(fill);
+        background.setCornerRadius(rawDp(3));
+        view.setBackground(background);
+        view.setClickable(true);
+        return view;
+    }
+
+    private LinearLayout.LayoutParams recoveryTop(int top) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.setMargins(0, rawDp(top), 0, 0);
+        return params;
+    }
+
+    private int rawDp(float value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private String abbreviateTrace(String trace) {
+        int limit = Math.min(trace.length(), 5000);
+        return trace.substring(0, limit);
+    }
+
+    private void clearCrashMarker() {
+        getSharedPreferences(DIAGNOSTIC_PREFS, MODE_PRIVATE).edit().clear().commit();
+    }
+
+    private void clearDownloadableContent() {
+        File directory = new File(getFilesDir(), "content");
+        File active = new File(directory, "active.json");
+        File staging = new File(directory, "staging.json");
+        if (active.exists() && !active.delete()) {
+            android.util.Log.w("SignalTrace", "Could not delete active content cache");
+        }
+        if (staging.exists() && !staging.delete()) {
+            android.util.Log.w("SignalTrace", "Could not delete staging content cache");
+        }
+        getSharedPreferences("portfolio_showcase", MODE_PRIVATE)
+            .edit()
+            .remove("portfolio_content")
+            .apply();
     }
 
     private void configureWindow() {
         Window window = getWindow();
         window.setStatusBarColor(AppTheme.INK);
         window.setNavigationBarColor(AppTheme.INK);
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            WindowInsetsController controller = window.getInsetsController();
-            if (controller != null) {
-                controller.setSystemBarsAppearance(0,
-                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                        | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
-            }
-        }
     }
 
     private View buildShell() {

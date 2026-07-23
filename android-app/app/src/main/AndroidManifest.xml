@@ -10,7 +10,7 @@
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="false"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/app_icon_art"
         android:label="SignalTrace 成长档案"
         android:supportsRtl="true"
         android:usesCleartextTraffic="false"
