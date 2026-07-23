@@ -6,7 +6,7 @@ import path from "node:path";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifestPath = path.join(root, "content", "app-update.json");
 const contentPath = path.join(root, "content", "portfolio.json");
-const apkPath = path.join(root, "android-app", "app", "build", "outputs", "apk", "debug", "app-debug.apk");
+const localApkPath = path.join(root, "android-app", "app", "build", "outputs", "apk", "debug", "app-debug.apk");
 
 const [manifestBytes, contentBytes] = await Promise.all([
   readFile(manifestPath),
@@ -44,15 +44,29 @@ requireHttps(manifest.contentPack.url, "contentPack.url");
 requireHttps(manifest.apk.url, "apk.url");
 requireHttps(manifest.releasePageUrl, "releasePageUrl");
 
-try {
-  const apkBytes = await readFile(apkPath);
-  const apkInfo = await stat(apkPath);
-  if (manifest.apk.sizeBytes !== apkInfo.size) fail("apk.sizeBytes does not match the current debug APK");
-  if (manifest.apk.sha256 !== sha256(apkBytes)) fail("apk.sha256 does not match the current debug APK");
-} catch (error) {
-  if (error?.code !== "ENOENT") throw error;
-  console.warn("APK not present; skipped local APK hash verification.");
+const publishedApkPath = path.join(
+  root,
+  "public",
+  "downloads",
+  path.basename(new URL(manifest.apk.url).pathname),
+);
+let verifiedApk = false;
+for (const candidate of [publishedApkPath, localApkPath]) {
+  try {
+    const apkBytes = await readFile(candidate);
+    const apkInfo = await stat(candidate);
+    if (manifest.apk.sizeBytes !== apkInfo.size) {
+      fail(`apk.sizeBytes does not match ${path.relative(root, candidate)}`);
+    }
+    if (manifest.apk.sha256 !== sha256(apkBytes)) {
+      fail(`apk.sha256 does not match ${path.relative(root, candidate)}`);
+    }
+    verifiedApk = true;
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
 }
+if (!verifiedApk) console.warn("APK not present; skipped local APK hash verification.");
 
 console.log(
   `Validated update manifest ${manifest.versionName}, content ${manifest.contentPack.version}, channel ${manifest.channel}.`,
