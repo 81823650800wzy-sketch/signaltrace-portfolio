@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="app_icon_background">#0D1114</color>
+
     <style name="Theme.LearningEvidence" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:statusBarColor">#10171D</item>
-        <item name="android:navigationBarColor">#10171D</item>
-        <item name="android:colorAccent">#F4C84A</item>
+        <item name="android:statusBarColor">#0D1114</item>
+        <item name="android:navigationBarColor">#0D1114</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:colorAccent">#F6B82E</item>
+        <item name="android:windowDisablePreview">false</item>
     </style>
 </resources>

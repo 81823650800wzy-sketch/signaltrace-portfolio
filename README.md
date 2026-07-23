@@ -11,8 +11,9 @@
 - 给亲友看：用容易理解的流程和案例，说明这段实习具体学到了什么。
 - 核心成果：16条实际实习证据、32节点热力流程实验室、4类脱敏仪控复盘和1个产品经理案例。
 - 产品案例：FieldTrace仪控巡检认知地图，从设备定位、DCS趋势和重复异常等实际日志提炼MVP。
-- 视觉系统：原创工业战术风格，以斜切纯色色块、错位阴影和伪3D界面统一Web与Android。
-- 更新方式：Android默认进入在线作品集Shell，网站发布后可同步界面排版和内容形式；原生离线档案保留缓存与本地视频入口，敏感素材不进入公开仓库。
+- 视觉系统：原创 SignalTrace 工业档案风格，以石墨黑、纸白、警示黄、信号青、斜切几何和三维信号棱镜统一所有原生界面。
+- Android体验：原生名片、实习四层子界面、响应特性交互实验室、可编辑人生愿望清单、几何翻转导航和连续动效。
+- 更新方式：采用“成长资源包 + APK能力包”双层发布；资源包经过暂存、SHA-256校验和原子切换，失败时继续使用旧版本。
 
 ## 项目结构
 
@@ -21,7 +22,8 @@ content/                 统一公开内容源
 public/content/          网站发布的更新文件（构建前自动同步）
 src/                     实习成果首页、产品案例、流程实验室、本地内容工作台
 data/public/             流程图和脱敏案例数据
-android-app/             Android离线作品集、离线缓存与网络更新
+android-app/             Android成长档案、交互实验室、本地证据与分层更新
+brand/                   SignalTrace原创图标母版
 docs/                    架构、发布、隐私和实习成果文档
 ```
 
@@ -51,11 +53,11 @@ npm run build
 
 ## Android更新
 
-Android App启动时和系统定时任务会从HTTPS地址检查：
+Android App启动时和系统定时任务会从HTTPS地址读取版本清单：
 
-- `content/portfolio.json`：公开作品内容，验证后自动缓存并刷新。
-- `content/app-update.json`：APK版本清单，检测到新版本后显示发布页入口。
+- `content/portfolio.json`：公开成长资源包，包含身份、实习、实验、作品、愿望模板与模型入口。
+- `content/app-update.json`：声明资源包和APK的版本、地址、大小与SHA-256摘要。
 
-断网时继续使用最后一次成功内容；首次离线启动使用APK内置内容。普通Android App不能静默覆盖安装自身，因此APK升级仍需用户或应用商店确认。
+资源包先下载到`staging`，通过摘要和结构验证后才原子替换`active`；断网、校验失败或更新中断均继续使用最后成功版本。APK能力包也会在App内下载并校验，但受Android安全模型约束，最终安装必须由用户确认。本地视频、愿望完成状态和自定义愿望不进入公开更新包。
 
 详见[架构说明](docs/ARCHITECTURE.md)、[内容发布流程](docs/CONTENT_RELEASE.md)、[GitHub Pages设置](docs/GITHUB_PAGES_SETUP.md)和[阅读指南](docs/COMPANY_REVIEW_GUIDE.md)。
