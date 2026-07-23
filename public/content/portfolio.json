@@ -1,6 +1,6 @@
 {
   "meta": {
-    "version": "2026.07.5",
+    "version": "2026.07.6",
     "updatedAt": "2026-07-23"
   },
   "profile": {
@@ -9,6 +9,130 @@
     "headline": "从现场信号、设备异常和巡检问题出发，建立可验证的系统理解与产品判断",
     "summary": "我把实际跟班中接触的仪表消缺、巡检抄表、DCS趋势判断和原理学习整理成公开安全的证据档案，并从真实痛点中提炼产品机会。这里展示的是我的参与、理解与求证过程，不替代师傅结论，也不连接生产系统。"
   },
+  "experience": {
+    "schemaVersion": 2,
+    "brand": {
+      "name": "SignalTrace",
+      "descriptor": "Growth OS",
+      "motif": "上升信号穿过工业棱镜",
+      "palette": {
+        "ink": "#0D1114",
+        "paper": "#EEEFE9",
+        "amber": "#F6B82E",
+        "teal": "#32CDBE",
+        "red": "#EE5244"
+      }
+    },
+    "modules": [
+      "identity",
+      "internship",
+      "responseLab",
+      "wishlist",
+      "updates"
+    ]
+  },
+  "internship": {
+    "title": "电厂仪控实习",
+    "phase": "现场学习进行中",
+    "organization": "仪控班",
+    "safetyBoundary": "公开内容不包含生产系统连接、控制指令、敏感参数或未经授权的现场素材。",
+    "subspaces": [
+      {
+        "id": "overview",
+        "title": "总览",
+        "purpose": "查看阶段、进度和证据边界"
+      },
+      {
+        "id": "journal",
+        "title": "现场日志",
+        "purpose": "按事实、参与、学习和产品信号展开"
+      },
+      {
+        "id": "works",
+        "title": "作品",
+        "purpose": "查看成果和产品案例"
+      },
+      {
+        "id": "capability",
+        "title": "能力图谱",
+        "purpose": "从能力追溯到证据和模型"
+      }
+    ]
+  },
+  "experiments": [
+    {
+      "id": "hydrogen-response-2026-07-23",
+      "title": "氢气纯度仪响应特性分析",
+      "date": "2026-07-23",
+      "instrument": "热导式氢气纯度分析仪",
+      "manufacturerAccuracy": "±0.2%",
+      "manufacturerT90": "≤23秒",
+      "measuredT90": "约73~90秒",
+      "datasets": [
+        {
+          "label": "95%标气 / 从低浓度响应",
+          "points": 28,
+          "durationSeconds": 244,
+          "model": "双指数",
+          "stableValue": "94.755%",
+          "rSquared": "0.9995",
+          "accuracyBandSeconds": 80
+        },
+        {
+          "label": "90%标气 / 从高浓度响应",
+          "points": 21,
+          "durationSeconds": 282,
+          "model": "单指数",
+          "stableValue": "90.003%",
+          "rSquared": "0.9978",
+          "accuracyBandSeconds": 30
+        }
+      ],
+      "stopRules": [
+        "连续3次重新拟合的Pmax变化<0.02%",
+        "最近两次读数变化率<0.002%/s"
+      ],
+      "boundary": "模型仅辅助判断；首次应用前应以标气验证当前设备，并复核样气流量、管路死体积、泄漏和传感器状态。"
+    }
+  ],
+  "wishlist": [
+    {
+      "id": "wish-growth-archive",
+      "horizon": "NOW",
+      "title": "建成可长期维护的个人成长档案",
+      "note": "让每一次学习都有证据、有版本、可回看"
+    },
+    {
+      "id": "wish-response-case",
+      "horizon": "NOW",
+      "title": "把响应等待问题做成完整产品案例",
+      "note": "从原始录像、采样、拟合走到现场复核"
+    },
+    {
+      "id": "wish-industrial-product",
+      "horizon": "NEXT",
+      "title": "独立完成一个可演示的工业数字化作品",
+      "note": "真正解决认知、巡检或复盘中的具体问题"
+    },
+    {
+      "id": "wish-product-data",
+      "horizon": "NEXT",
+      "title": "系统学习产品设计与数据分析",
+      "note": "让现场理解能够转化为清晰判断"
+    },
+    {
+      "id": "wish-real-scenes",
+      "horizon": "LIFETIME",
+      "title": "持续走进真实场景并保持敬畏",
+      "note": "不把模型当事实，不把工具当结论"
+    },
+    {
+      "id": "wish-year-letter",
+      "horizon": "LIFETIME",
+      "title": "每年留一份给未来自己的回顾",
+      "note": "记录改变、取舍、未完成与下一程"
+    }
+  ],
   "capabilities": [
     {
       "title": "从信号追到系统",

@@ -8,7 +8,8 @@
     "sync:content": "node scripts/sync-content.mjs",
     "validate:data": "node scripts/validate-process.mjs",
     "validate:portfolio": "node scripts/validate-portfolio.mjs",
-    "check": "npm run sync:content && npm run validate:data && npm run validate:portfolio && tsc --noEmit",
+    "validate:update": "node scripts/validate-app-update.mjs",
+    "check": "npm run sync:content && npm run validate:data && npm run validate:portfolio && npm run validate:update && tsc --noEmit",
     "build": "npm run check && vite build",
     "preview": "vite preview --host 127.0.0.1"
   },

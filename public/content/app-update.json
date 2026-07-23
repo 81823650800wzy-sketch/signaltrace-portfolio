@@ -1,9 +1,23 @@
 {
-  "versionCode": 6,
-  "versionName": "0.6.0",
-  "minimumSupportedVersionCode": 1,
-  "apkUrl": "",
-  "releasePageUrl": "https://github.com/81823650800wzy-sketch/signaltrace-portfolio/releases/latest",
-  "releaseNotes": "App新增在线作品集Shell，支持界面排版和内容形式随网站整体更新；保留原生离线档案、看板、复盘和本地视频入口。",
+  "manifestVersion": 2,
+  "versionCode": 7,
+  "versionName": "0.7.0",
+  "minimumSupportedVersionCode": 6,
+  "channel": "stable",
+  "contentPack": {
+    "version": "2026.07.6",
+    "url": "https://81823650800wzy-sketch.github.io/signaltrace-portfolio/content/portfolio.json",
+    "sha256": "03f91b329b157e4a2cfcc725384991fa930e449dd8124bef4727e89a7167e413",
+    "sizeBytes": 17819
+  },
+  "apk": {
+    "url": "https://github.com/81823650800wzy-sketch/signaltrace-portfolio/releases/download/v0.7.0/SignalTrace-v0.7.0.apk",
+    "sha256": "2624546d9f0fe480d4807aa0dfc8b4b84de4c342134b2ccb23237fe9fb482865",
+    "sizeBytes": 1971829
+  },
+  "apkUrl": "https://github.com/81823650800wzy-sketch/signaltrace-portfolio/releases/download/v0.7.0/SignalTrace-v0.7.0.apk",
+  "apkSha256": "2624546d9f0fe480d4807aa0dfc8b4b84de4c342134b2ccb23237fe9fb482865",
+  "releasePageUrl": "https://github.com/81823650800wzy-sketch/signaltrace-portfolio/releases/tag/v0.7.0",
+  "releaseNotes": "SignalTrace 0.7.0 完全重构：新增风格化原生名片、实习四层子界面、氢气响应交互实验室、可编辑人生愿望清单、几何翻转导航、3D 信号场与分阶段更新仓库。更新包支持版本清单、暂存下载、SHA-256 校验、原子切换和 APK 能力包安装；本地视频与个人愿望状态不会上传。",
   "publishedAt": "2026-07-23"
 }
