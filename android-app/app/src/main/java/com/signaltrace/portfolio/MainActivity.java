@@ -25,13 +25,11 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -39,14 +37,15 @@ public final class MainActivity extends Activity {
     private static final int IMPORT_CONTENT_REQUEST = 4001;
     private static final int ATTACH_MEDIA_REQUEST = 4002;
     private static final String VIDEO_URI_KEY = "hydrogen_response_video";
-    private static final String CUSTOM_WISHES_KEY = "custom_wishes";
+    private static final String DISPLAY_NAME_KEY = "display_name";
     private static final String DIAGNOSTIC_PREFS = "signaltrace_diagnostics";
     private static final String CRASH_PENDING_KEY = "crash_pending";
     private static final String CRASH_TRACE_KEY = "crash_trace";
 
     private ContentStore contentStore;
     private UpdateManager updateManager;
-    private FrameLayout pageHost;
+    private SwipePageHost pageHost;
+    private View appHeader;
     private GeometricNavBar navigation;
     private TextView headerStatus;
     private int activeDestination;
@@ -56,6 +55,7 @@ public final class MainActivity extends Activity {
     private int updateProgress;
     private String updateMessage = "等待检查";
     private boolean updateBusy;
+    private boolean immersive;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,6 +101,7 @@ public final class MainActivity extends Activity {
         });
     }
 
+    @android.annotation.SuppressLint("ApplySharedPref")
     private String recordCrash(Throwable error) {
         StringWriter writer = new StringWriter();
         error.printStackTrace(new PrintWriter(writer));
@@ -133,12 +134,12 @@ public final class MainActivity extends Activity {
         body.setPadding(rawDp(22), rawDp(28), rawDp(22), rawDp(28));
         body.setBackgroundColor(Color.rgb(238, 239, 233));
 
-        TextView label = recoveryText("SIGNALTRACE / SAFE START", 12, Color.rgb(238, 82, 68), true);
+        TextView label = recoveryText("安全启动", 12, Color.rgb(238, 82, 68), true);
         body.addView(label);
         TextView title = recoveryText("App 已进入恢复模式", 27, Color.rgb(13, 17, 20), true);
         body.addView(title, recoveryTop(10));
         TextView detail = recoveryText(
-            reason + "。你的本地视频和愿望状态仍会保留；下面可以先重试，或只清理可重新下载的内容缓存。",
+            reason + "。你的本地视频和个性称呼仍会保留；下面可以先重试，或只清理可重新下载的内容缓存。",
             14,
             Color.rgb(38, 45, 49),
             false
@@ -234,6 +235,7 @@ public final class MainActivity extends Activity {
         return trace.substring(0, limit);
     }
 
+    @android.annotation.SuppressLint("ApplySharedPref")
     private void clearCrashMarker() {
         getSharedPreferences(DIAGNOSTIC_PREFS, MODE_PRIVATE).edit().clear().commit();
     }
@@ -264,10 +266,18 @@ public final class MainActivity extends Activity {
         LinearLayout shell = new LinearLayout(this);
         shell.setOrientation(LinearLayout.VERTICAL);
         shell.setBackgroundColor(AppTheme.INK);
-        shell.addView(buildHeader(), new LinearLayout.LayoutParams(-1, dp(64)));
+        appHeader = buildHeader();
+        shell.addView(appHeader, new LinearLayout.LayoutParams(-1, dp(64)));
 
-        pageHost = new FrameLayout(this);
+        pageHost = new SwipePageHost(this);
         pageHost.setBackgroundColor(AppTheme.PAPER);
+        pageHost.setListener(direction -> {
+            int next = Math.max(0, Math.min(4, activeDestination + direction));
+            if (next != activeDestination) {
+                navigation.select(next, true);
+                showDestination(next, true);
+            }
+        });
         shell.addView(pageHost, new LinearLayout.LayoutParams(-1, 0, 1f));
 
         navigation = new GeometricNavBar(this);
@@ -297,13 +307,13 @@ public final class MainActivity extends Activity {
         LinearLayout copy = new LinearLayout(this);
         copy.setOrientation(LinearLayout.VERTICAL);
         copy.setPadding(dp(10), 0, 0, 0);
-        TextView title = AppTheme.text(this, "SIGNALTRACE / GROWTH OS", 14, AppTheme.WHITE, true);
-        TextView subtitle = AppTheme.text(this, "现场信号 · 证据档案 · 人生轨迹", 10, AppTheme.MUTED, false);
+        TextView title = AppTheme.text(this, displayName(), 14, AppTheme.WHITE, true);
+        TextView subtitle = AppTheme.text(this, "我的电厂实习 · 信号正在生长", 10, AppTheme.MUTED, false);
         copy.addView(title);
         copy.addView(subtitle, topParams(2));
         bar.addView(copy, new LinearLayout.LayoutParams(0, -2, 1f));
 
-        headerStatus = AppTheme.label(this, "LIVE / " + BuildConfig.VERSION_NAME, AppTheme.TEAL);
+        headerStatus = AppTheme.label(this, "在线 · " + BuildConfig.VERSION_NAME, AppTheme.TEAL);
         headerStatus.setGravity(Gravity.CENTER);
         headerStatus.setPadding(dp(9), dp(6), dp(9), dp(6));
         headerStatus.setBackground(AppTheme.panel(AppTheme.INK_2, AppTheme.TEAL, 6, this));
@@ -317,12 +327,12 @@ public final class MainActivity extends Activity {
     }
 
     private void showDestination(int destination, boolean animate) {
-        activeDestination = destination;
-        View next = buildDestination(destination);
+        activeDestination = Math.max(0, Math.min(4, destination));
+        View next = buildDestination(activeDestination);
         if (!animate || pageHost.getChildCount() == 0) {
             pageHost.removeAllViews();
             pageHost.addView(next, new FrameLayout.LayoutParams(-1, -1));
-            navigation.select(destination, false);
+            navigation.select(activeDestination, false);
             return;
         }
 
@@ -352,7 +362,7 @@ public final class MainActivity extends Activity {
     private View buildDestination(int destination) {
         if (destination == 1) return buildInternshipPage();
         if (destination == 2) return buildLabPage();
-        if (destination == 3) return buildWishlistPage();
+        if (destination == 3) return buildTrajectoryPage();
         if (destination == 4) return buildUpdatePage();
         return buildIdentityPage();
     }
@@ -360,24 +370,24 @@ public final class MainActivity extends Activity {
     private View buildIdentityPage() {
         LinearLayout body = pageBody(false);
         SignalSceneView scene = new SignalSceneView(this);
-        body.addView(scene, new LinearLayout.LayoutParams(-1, dp(248)));
+        body.addView(scene, new LinearLayout.LayoutParams(-1, dp(236)));
 
-        JSONObject profile = contentStore.object("profile");
         LinearLayout identity = panel(AppTheme.PAPER, AppTheme.INK);
-        addReveal(identity, AppTheme.label(this, "ID / FIELD OBSERVER / 2026", AppTheme.RED), 0);
-        addReveal(identity, AppTheme.text(this, profile.optString("name", "我的实习成长档案"), 28, AppTheme.INK, true), 1, 8);
-        addReveal(identity, AppTheme.text(this, profile.optString("role", "仪控班实习 · 现场学习进行中"), 13, AppTheme.INK_3, true), 2, 8);
-        addReveal(identity, AppTheme.text(this, profile.optString("headline", ""), 16, AppTheme.INK, false), 3, 18);
-        addReveal(identity, AppTheme.text(this, profile.optString("summary", ""), 12, AppTheme.INK_3, false), 4, 10);
+        addReveal(identity, AppTheme.label(this, "我的现场 · 2026", AppTheme.RED), 0);
+        addReveal(identity, AppTheme.text(this, displayName(), 29, AppTheme.INK, true), 1, 8);
+        addReveal(identity, AppTheme.text(this, "仪控班实习 · 一边观察，一边建立自己的判断", 13, AppTheme.INK_3, true), 2, 8);
 
         LinearLayout idFooter = new LinearLayout(this);
         idFooter.setGravity(Gravity.CENTER_VERTICAL);
-        TextView serial = AppTheme.label(this, "TRACE-" + contentStore.version(), AppTheme.INK);
-        idFooter.addView(serial, new LinearLayout.LayoutParams(0, -2, 1f));
-        TextView copy = command("复制名片", "↗", AppTheme.INK, AppTheme.AMBER);
-        copy.setOnClickListener(view -> copyIdentity(profile));
-        idFooter.addView(copy);
-        addReveal(identity, idFooter, 5, 18);
+        FloatingActionView edit = new FloatingActionView(this, "✦", "换个称呼", AppTheme.AMBER, AppTheme.INK, 0f);
+        edit.setOnClickListener(view -> showDisplayNameDialog());
+        idFooter.addView(edit, new LinearLayout.LayoutParams(0, -2, 1f));
+        FloatingActionView focus = new FloatingActionView(this, "⛶", "沉浸", AppTheme.INK_2, AppTheme.WHITE, 1.7f);
+        focus.setOnClickListener(view -> toggleImmersive());
+        LinearLayout.LayoutParams focusParams = new LinearLayout.LayoutParams(0, -2, 1f);
+        focusParams.setMargins(dp(9), 0, 0, 0);
+        idFooter.addView(focus, focusParams);
+        addReveal(identity, idFooter, 3, 18);
         body.addView(identity, fullTop(0));
 
         LinearLayout stats = new LinearLayout(this);
@@ -387,7 +397,7 @@ public final class MainActivity extends Activity {
         stats.addView(metric("01", "产品案例", AppTheme.RED), weighted(1, 8));
         body.addView(stats, fullTop(14));
 
-        addSection(body, "NOW / CURRENT SIGNAL", "今天正在形成的证据");
+        addSection(body, "此刻", "最近一次现场观察");
         List<JSONObject> journal = contentStore.objects("journal");
         if (!journal.isEmpty()) {
             JSONObject latest = journal.get(journal.size() - 1);
@@ -397,7 +407,7 @@ public final class MainActivity extends Activity {
                 AppTheme.TEAL));
             now.addView(AppTheme.text(this, latest.optString("title", ""), 19, AppTheme.WHITE, true), topParams(8));
             now.addView(AppTheme.text(this, latest.optString("learning", ""), 12, AppTheme.PAPER_2, false), topParams(10));
-            TextView enter = command("进入实习档案", "→", AppTheme.WHITE, AppTheme.TEAL);
+            FloatingActionView enter = new FloatingActionView(this, "→", "展开现场", AppTheme.TEAL, AppTheme.INK, 0.8f);
             enter.setOnClickListener(view -> {
                 navigation.select(1, true);
                 showDestination(1, true);
@@ -406,17 +416,17 @@ public final class MainActivity extends Activity {
             body.addView(now, fullTop(10));
         }
 
-        addSection(body, "SYSTEM / MODULES", "不是展示页，而是会继续生长的个人系统");
-        body.addView(moduleLink("01", "实习档案", "按总览、日志、作品、能力图谱进入详细子界面", AppTheme.AMBER, 1), fullTop(10));
-        body.addView(moduleLink("02", "响应实验室", "用原始采样点触摸查看曲线、模型和停止条件", AppTheme.TEAL, 2), fullTop(9));
-        body.addView(moduleLink("03", "人生愿望", "可完成、可追加、只保存在自己的设备中", AppTheme.RED, 3), fullTop(9));
+        addSection(body, "向里走", "现场、数据与证据轨迹");
+        body.addView(moduleLink("01", "现场", "日志、作品与能力从内部展开", AppTheme.AMBER, 1), fullTop(10));
+        body.addView(moduleLink("02", "三维数据", "同时旋转两组响应曲线并点选读数", AppTheme.TEAL, 2), fullTop(9));
+        body.addView(moduleLink("03", "证据轨迹", "把16条现场事件放进空间关系中", AppTheme.RED, 3), fullTop(9));
         body.setPadding(0, 0, 0, dp(20));
         return wrap(body);
     }
 
     private View buildInternshipPage() {
         LinearLayout body = pageBody(true);
-        body.addView(kicker("INTERNSHIP / POWER PLANT I&C", "实习不是一列文本，而是一组可以深入的现场空间"));
+        body.addView(kicker("我的现场", "从设备、信号和一次次判断向里展开"));
         body.addView(segment(
             new String[]{"总览", "现场日志", "作品", "能力图谱"},
             internshipMode,
@@ -436,34 +446,34 @@ public final class MainActivity extends Activity {
     private void buildInternshipOverview(LinearLayout body) {
         List<JSONObject> journal = contentStore.objects("journal");
         LinearLayout phase = panel(AppTheme.INK, AppTheme.INK);
-        phase.addView(AppTheme.label(this, "PHASE / FIELD LEARNING", AppTheme.AMBER));
-        phase.addView(AppTheme.text(this, "从看见设备，到理解信号为什么可信", 23, AppTheme.WHITE, true), topParams(8));
+        phase.addView(AppTheme.label(this, "这一阶段", AppTheme.AMBER));
+        phase.addView(AppTheme.text(this, "从看见设备，到理解信号", 23, AppTheme.WHITE, true), topParams(8));
         phase.addView(AppTheme.text(this,
-            journal.size() + " 条现场事件已经形成证据链。所有公开内容保留参与边界，不替代师傅判断，也不连接生产系统。",
+            journal.size() + " 次观察，正在变成自己的经验地图。",
             12, AppTheme.PAPER_2, false), topParams(10));
-        phase.addView(progressRail(Math.min(1f, journal.size() / 24f), "当前学习周期", journal.size() + " / 24 EVENTS"), topParams(18));
+        phase.addView(progressRail(Math.min(1f, journal.size() / 24f), "当前阶段", journal.size() + " / 24"), topParams(18));
         body.addView(phase, fullTop(16));
 
-        addSection(body, "SUBSPACE / ENTER", "详细信息分布在内部，不再堆成一张长页面");
+        addSection(body, "现场分层", "从记录、作品走到能力证据");
         body.addView(subspace("A", "现场日志", journal.size() + " 条事实、参与、学习与产品信号", AppTheme.TEAL, 1), fullTop(10));
         body.addView(subspace("B", "作品与项目", contentStore.objects("works").size() + " 项成果 + FieldTrace 产品案例", AppTheme.AMBER, 2), fullTop(9));
         body.addView(subspace("C", "能力图谱", contentStore.objects("capabilities").size() + " 条能力证据 + 流程模型入口", AppTheme.RED, 3), fullTop(9));
 
-        addSection(body, "BOUNDARY / TRUST", "事实、推断、待确认必须保持距离");
+        addSection(body, "判断方式", "事实、推断、待确认");
         body.addView(trustGrid(), fullTop(10));
     }
 
     private void buildJournalSubPage(LinearLayout body) {
         List<JSONObject> journal = contentStore.objects("journal");
-        addSection(body, "FIELD LOG / " + journal.size(), "点击事件展开四层证据");
+        addSection(body, journal.size() + " 条现场记录", "当时的观察、参与和判断");
         for (int index = journal.size() - 1; index >= 0; index--) {
             JSONObject item = journal.get(index);
             LinearLayout detail = new LinearLayout(this);
             detail.setOrientation(LinearLayout.VERTICAL);
-            detail.addView(detailLine("OBS / 现场观察", item.optString("observation", ""), AppTheme.TEAL));
-            detail.addView(detailLine("ACT / 本人参与", item.optString("participation", ""), AppTheme.AMBER), topParams(10));
-            detail.addView(detailLine("LEARN / 学习结论", item.optString("learning", ""), AppTheme.WHITE), topParams(10));
-            detail.addView(detailLine("PRODUCT / 产品信号", item.optString("productSignal", ""), AppTheme.RED), topParams(10));
+            detail.addView(detailLine("现场观察", item.optString("observation", ""), AppTheme.TEAL));
+            detail.addView(detailLine("本人参与", item.optString("participation", ""), AppTheme.AMBER), topParams(10));
+            detail.addView(detailLine("学习结论", item.optString("learning", ""), AppTheme.WHITE), topParams(10));
+            detail.addView(detailLine("产品信号", item.optString("productSignal", ""), AppTheme.RED), topParams(10));
             body.addView(expandable(
                 item.optString("date", "--.--"),
                 item.optString("title", "现场记录"),
@@ -474,7 +484,7 @@ public final class MainActivity extends Activity {
     }
 
     private void buildWorksSubPage(LinearLayout body) {
-        addSection(body, "OUTPUT / SELECTED WORK", "从现场观察到可验证作品");
+        addSection(body, "我的作品", "从现场观察长出来的结果");
         int index = 1;
         for (JSONObject work : contentStore.objects("works")) {
             LinearLayout card = panel(index % 2 == 0 ? AppTheme.INK_2 : AppTheme.INK, AppTheme.LINE);
@@ -487,14 +497,14 @@ public final class MainActivity extends Activity {
             index++;
         }
 
-        addSection(body, "PRODUCT CASE / FIELDTRACE", "真实痛点如何转成产品判断");
+        addSection(body, "FieldTrace", "真实痛点如何变成产品判断");
         for (JSONObject product : contentStore.objects("productCases")) {
             LinearLayout details = new LinearLayout(this);
             details.setOrientation(LinearLayout.VERTICAL);
-            details.addView(detailLine("USERS / 用户", product.optString("users", ""), AppTheme.TEAL));
-            details.addView(detailLine("INSIGHT / 洞察", product.optString("insight", ""), AppTheme.AMBER), topParams(10));
-            details.addView(detailLine("SOLUTION / 方案", product.optString("solution", ""), AppTheme.WHITE), topParams(10));
-            details.addView(detailLine("EVIDENCE / 来源", product.optString("evidence", ""), AppTheme.RED), topParams(10));
+            details.addView(detailLine("用户", product.optString("users", ""), AppTheme.TEAL));
+            details.addView(detailLine("洞察", product.optString("insight", ""), AppTheme.AMBER), topParams(10));
+            details.addView(detailLine("方案", product.optString("solution", ""), AppTheme.WHITE), topParams(10));
+            details.addView(detailLine("来源", product.optString("evidence", ""), AppTheme.RED), topParams(10));
             body.addView(expandable(
                 product.optString("stage", "概念验证"),
                 product.optString("title", "FieldTrace"),
@@ -505,7 +515,7 @@ public final class MainActivity extends Activity {
     }
 
     private void buildCapabilitySubPage(LinearLayout body) {
-        addSection(body, "CAPABILITY / EVIDENCE", "能力必须能指出证据落在哪里");
+        addSection(body, "能力从哪里来", "每一项都能回到具体证据");
         int index = 0;
         for (JSONObject capability : contentStore.objects("capabilities")) {
             LinearLayout card = panel(AppTheme.PAPER, index == 1 ? AppTheme.TEAL : AppTheme.INK);
@@ -517,14 +527,14 @@ public final class MainActivity extends Activity {
             copy.setOrientation(LinearLayout.VERTICAL);
             copy.addView(AppTheme.text(this, capability.optString("title", ""), 19, AppTheme.INK, true));
             copy.addView(AppTheme.text(this, capability.optString("detail", ""), 12, AppTheme.INK_3, false), topParams(7));
-            copy.addView(AppTheme.label(this, "PROOF / " + capability.optString("proof", ""), AppTheme.RED), topParams(12));
+            copy.addView(AppTheme.label(this, "证据 · " + capability.optString("proof", ""), AppTheme.RED), topParams(12));
             row.addView(copy, new LinearLayout.LayoutParams(0, -2, 1f));
             card.addView(row);
             body.addView(card, fullTop(index == 0 ? 10 : 9));
             index++;
         }
 
-        addSection(body, "MODEL / PROCESS LIBRARY", "后续模型和实景素材有独立成长入口");
+        addSection(body, "流程模型", "继续补充的空间入口");
         for (JSONObject model : contentStore.objects("models")) {
             body.addView(keyValuePanel(
                 model.optString("phase", "规划中"),
@@ -536,110 +546,145 @@ public final class MainActivity extends Activity {
 
     private View buildLabPage() {
         LinearLayout body = pageBody(true);
-        body.addView(kicker("H₂ RESPONSE / ANALYSIS LAB", "原始采样、函数拟合、停止条件和本地视频在同一条证据链"));
+        body.addView(kicker("三维响应数据", "两组采样在同一个空间里"));
 
-        TextView cursorValue = AppTheme.text(this, "拖动曲线查看任意时刻", 12, AppTheme.WHITE, true);
-        LinearLayout chartPanel = panel(AppTheme.INK_2, AppTheme.LINE);
-        chartPanel.addView(segment(
-            new String[]{"95% 标气 / 上升", "90% 标气 / 下降"},
-            response95 ? 0 : 1,
-            index -> {
-                response95 = index == 0;
-                showDestination(2, true);
-            }
-        ));
+        TextView pointTitle = AppTheme.label(this, "95% 标气 · 起点", AppTheme.AMBER);
+        TextView pointValue = AppTheme.text(this, "93.200% H₂", 25, AppTheme.WHITE, true);
+        TextView pointRate = AppTheme.text(this, "T + 0s · 等待变化", 11, AppTheme.MUTED, true);
+        TextView cursorValue = AppTheme.text(this, response95 ? "95% 数据切片" : "90% 数据切片", 12, AppTheme.WHITE, true);
         ResponseCurveView curve = new ResponseCurveView(this);
         curve.setDataset(response95);
         curve.setCursorListener((seconds, value) -> cursorValue.setText(
-            String.format(Locale.US, "T + %.0fs  /  %.3f%% H₂", seconds, value)
+            String.format(Locale.US, "T + %.0fs · %.3f%% H₂", seconds, value)
         ));
-        chartPanel.addView(curve, new LinearLayout.LayoutParams(-1, dp(230)));
+
+        SpatialDataView space = new SpatialDataView(this);
+        space.setListener(point -> {
+            response95 = point.dataset == 0;
+            curve.setDataset(response95);
+            cursorValue.setText(response95 ? "95% 数据切片" : "90% 数据切片");
+            pointTitle.setText(response95 ? "95% 标气 · 上升" : "90% 标气 · 下降");
+            pointTitle.setTextColor(response95 ? AppTheme.AMBER : AppTheme.TEAL);
+            pointValue.setText(String.format(Locale.US, "%.3f%% H₂", point.value));
+            pointRate.setText(String.format(
+                Locale.US,
+                "T + %.0fs · 变化率 %+.4f%%/s",
+                point.seconds,
+                point.rate
+            ));
+        });
+        body.addView(space, new LinearLayout.LayoutParams(-1, dp(330)));
+
+        LinearLayout focusRow = new LinearLayout(this);
+        FloatingActionView focus95 = new FloatingActionView(this, "↗", "95% 上升", AppTheme.AMBER, AppTheme.INK, 0f);
+        FloatingActionView focus90 = new FloatingActionView(this, "↘", "90% 下降", AppTheme.TEAL, AppTheme.INK, 1.8f);
+        focus95.setOnClickListener(view -> {
+            response95 = true;
+            curve.setDataset(true);
+            space.focusDataset(0);
+        });
+        focus90.setOnClickListener(view -> {
+            response95 = false;
+            curve.setDataset(false);
+            space.focusDataset(1);
+        });
+        focusRow.addView(focus95, new LinearLayout.LayoutParams(0, -2, 1f));
+        LinearLayout.LayoutParams focus90Params = new LinearLayout.LayoutParams(0, -2, 1f);
+        focus90Params.setMargins(dp(9), 0, 0, 0);
+        focusRow.addView(focus90, focus90Params);
+        body.addView(focusRow, fullTop(10));
+
+        LinearLayout selectedPoint = panel(AppTheme.INK_2, AppTheme.LINE);
+        selectedPoint.addView(pointTitle);
+        selectedPoint.addView(pointValue, topParams(6));
+        selectedPoint.addView(pointRate, topParams(5));
+        body.addView(selectedPoint, fullTop(12));
+        space.focusDataset(response95 ? 0 : 1);
+
+        addSection(body, "二维切片", "当前数据的平面投影");
+        LinearLayout chartPanel = panel(AppTheme.INK_2, AppTheme.LINE);
+        chartPanel.addView(curve, new LinearLayout.LayoutParams(-1, dp(220)));
         cursorValue.setGravity(Gravity.END);
         chartPanel.addView(cursorValue, topParams(8));
-        body.addView(chartPanel, fullTop(16));
-
-        LinearLayout metrics = new LinearLayout(this);
-        if (response95) {
-            metrics.addView(metric("94.755%", "预测稳定值", AppTheme.AMBER), weighted(1, 0));
-            metrics.addView(metric("0.9995", "双指数 R²", AppTheme.TEAL), weighted(1, 8));
-            metrics.addView(metric("80s", "进入精度带", AppTheme.RED), weighted(1, 8));
-        } else {
-            metrics.addView(metric("90.003%", "预测稳定值", AppTheme.TEAL), weighted(1, 0));
-            metrics.addView(metric("0.9978", "单指数 R²", AppTheme.AMBER), weighted(1, 8));
-            metrics.addView(metric("30s", "进入精度带", AppTheme.RED), weighted(1, 8));
-        }
-        body.addView(metrics, fullTop(12));
+        body.addView(chartPanel, fullTop(10));
 
         body.addView(videoEvidencePanel(), fullTop(14));
 
-        addSection(body, "DECISION / STOP WAITING", "两个条件必须同时成立");
+        addSection(body, "什么时候停止等待", "两个条件同时成立");
         LinearLayout decision = panel(AppTheme.PAPER, AppTheme.INK);
         decision.addView(numberedRule("A", "预测值收敛", "连续 3 次拟合的 Pmax 变化 < 0.02%", AppTheme.AMBER));
         decision.addView(numberedRule("B", "变化速率足够小", "最近两次读数变化率 < 0.002%/s", AppTheme.TEAL), topParams(12));
-        decision.addView(AppTheme.text(this, "A + B 同时满足 → 停止等待，取最后一次预测稳定值。首次应用前仍需用标气验证当前设备。", 12, AppTheme.INK, true), topParams(16));
+        decision.addView(AppTheme.text(this, "A + B → 取最后一次预测稳定值", 12, AppTheme.INK, true), topParams(16));
         body.addView(decision, fullTop(10));
 
-        addSection(body, "METHOD / FIVE STEPS", "从录像读数到可以复核的结论");
-        String[][] steps = {
-            {"01", "开始计时", "通气后每 5 秒记录一次读数"},
-            {"02", "形成样本", "采集 5–8 个点后开始指数拟合"},
-            {"03", "持续重算", "每新增一个点，重新观察 Pmax 收敛"},
-            {"04", "检查速率", "同步计算最近两点的读数变化率"},
-            {"05", "双重判定", "收敛和速率同时满足才停止"}
-        };
-        for (String[] step : steps) {
-            body.addView(methodStep(step[0], step[1], step[2]), fullTop(8));
-        }
-
-        addSection(body, "BOUNDARY / REPORT", "模型是判断辅助，不是现场校验的替代品");
+        addSection(body, "这次实测", "T90 约 73–90 秒");
         body.addView(keyValuePanel(
-            "实测发现",
-            "T90 约 73–90 秒",
+            "需要继续确认",
+            "比标称响应慢 3–4 倍",
             "相比厂家标称 ≤23 秒偏慢 3–4 倍，建议复核样气流量 400–600 ml/min、管路死体积、泄漏与传感器老化。"
         ), fullTop(10));
         return wrap(body);
     }
 
-    private View buildWishlistPage() {
+    private View buildTrajectoryPage() {
         LinearLayout body = pageBody(true);
-        List<JSONObject> wishes = allWishes();
-        int completed = 0;
-        for (JSONObject wish : wishes) {
-            if (isWishDone(wish.optString("id", ""))) completed++;
-        }
+        List<JSONObject> journal = contentStore.objects("journal");
+        java.util.Set<String> categories = new java.util.HashSet<>();
+        for (JSONObject item : journal) categories.add(item.optString("category", "未分类"));
+        body.addView(kicker("我的轨迹", journal.size() + "次现场观察，在空间里彼此相连"));
 
-        body.addView(kicker("LIFE LIST / OPEN HORIZON", "愿望不是完成率装饰，而是给未来行动留下坐标"));
-        WishOrbitView orbit = new WishOrbitView(this);
-        orbit.setProgress(completed, wishes.size());
-        body.addView(orbit, new LinearLayout.LayoutParams(-1, dp(220)));
+        TextView eventMeta = AppTheme.label(this, "最新节点", AppTheme.TEAL);
+        TextView eventTitle = AppTheme.text(this, "等待选择", 21, AppTheme.WHITE, true);
+        TextView eventDetail = AppTheme.text(this, "", 12, AppTheme.PAPER_2, false);
 
-        TextView add = command("添加一个愿望", "+", AppTheme.INK, AppTheme.AMBER);
-        add.setOnClickListener(view -> showAddWishDialog());
-        body.addView(add, fullTop(10));
+        EvidenceSpaceView space = new EvidenceSpaceView(this);
+        space.setListener((index, item) -> {
+            eventMeta.setText(String.format(
+                Locale.CHINA,
+                "%s · %s",
+                item.optString("date", ""),
+                item.optString("category", "")
+            ));
+            eventTitle.setText(item.optString("title", ""));
+            eventDetail.setText(item.optString("learning", ""));
+        });
+        space.setItems(journal);
+        body.addView(space, new LinearLayout.LayoutParams(-1, dp(340)));
 
-        String[] horizons = {"NOW", "NEXT", "LIFETIME"};
-        String[] labels = {"现在", "下一程", "这一生"};
-        for (int group = 0; group < horizons.length; group++) {
-            addSection(body, horizons[group] + " / " + labels[group], wishGroupSummary(wishes, horizons[group]));
-            for (JSONObject wish : wishes) {
-                if (horizons[group].equalsIgnoreCase(wish.optString("horizon", "NEXT"))) {
-                    body.addView(wishCard(wish), fullTop(8));
-                }
-            }
-        }
-        body.addView(AppTheme.text(this,
-            "愿望的完成状态与自定义条目只保存在本机。在线成长包可以增加新的默认方向，但不会覆盖你的个人选择。",
-            11, AppTheme.MUTED, false), fullTop(20));
+        LinearLayout selectedEvent = panel(AppTheme.INK_2, AppTheme.LINE);
+        selectedEvent.addView(eventMeta);
+        selectedEvent.addView(eventTitle, topParams(7));
+        selectedEvent.addView(eventDetail, topParams(8));
+        body.addView(selectedEvent, fullTop(10));
+
+        LinearLayout stats = new LinearLayout(this);
+        stats.addView(metric(String.valueOf(journal.size()), "观察节点", AppTheme.TEAL), weighted(1, 0));
+        stats.addView(metric(String.valueOf(categories.size()), "现场主题", AppTheme.AMBER), weighted(1, 8));
+        stats.addView(metric(String.valueOf(contentStore.objects("works").size()), "作品落点", AppTheme.RED), weighted(1, 8));
+        body.addView(stats, fullTop(12));
+
+        addSection(body, "连接方式", "不是按日期堆叠，而是按信号生长");
+        body.addView(methodStep("01", "看见", "记录现场发生了什么"), fullTop(8));
+        body.addView(methodStep("02", "求证", "区分事实、推断和待确认"), fullTop(8));
+        body.addView(methodStep("03", "转化", "把重复问题变成产品线索"), fullTop(8));
+
+        FloatingActionView openJournal = new FloatingActionView(this, "↗", "进入现场日志", AppTheme.AMBER, AppTheme.INK, 0.7f);
+        openJournal.setOnClickListener(view -> {
+            internshipMode = 1;
+            navigation.select(1, true);
+            showDestination(1, true);
+        });
+        body.addView(openJournal, fullTop(16));
         return wrap(body);
     }
 
     private View buildUpdatePage() {
         LinearLayout body = pageBody(true);
-        body.addView(kicker("UPDATE DEPOT / STAGED DELIVERY", "像大型游戏一样分层：清单、资源包、完整性验证、能力包"));
+        body.addView(kicker("我的更新", "内容和能力各自生长，失败也不影响当前版本"));
 
         LinearLayout state = panel(AppTheme.INK, AppTheme.INK);
         state.addView(AppTheme.label(this,
-            updateBusy ? "PIPELINE / RUNNING" : "CHANNEL / " + (remoteManifest == null ? "STABLE" : remoteManifest.channel.toUpperCase(Locale.ROOT)),
+            updateBusy ? "正在同步" : "当前通道 · " + (remoteManifest == null ? "稳定" : remoteManifest.channel),
             updateBusy ? AppTheme.AMBER : AppTheme.TEAL));
         state.addView(AppTheme.text(this, updateMessage, 22, AppTheme.WHITE, true), topParams(8));
         ProgressBar progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
@@ -667,26 +712,26 @@ public final class MainActivity extends Activity {
             body.addView(statusBand("能力包", "当前 APK 已是最新版本", AppTheme.TEAL), fullTop(9));
         }
 
-        addSection(body, "PIPELINE / FOUR GATES", "任何资源进入正式档案前都要经过四道门");
+        addSection(body, "更新保护", "新内容经过四步确认后才会生效");
         body.addView(updateGate("01", "获取版本清单", "HTTPS 清单声明版本、渠道、大小和下载地址", AppTheme.TEAL), fullTop(10));
-        body.addView(updateGate("02", "暂存更新包", "新包先进入 staging，不直接覆盖可用内容", AppTheme.AMBER), fullTop(8));
+        body.addView(updateGate("02", "暂存更新包", "新包先单独保存，不直接覆盖当前内容", AppTheme.AMBER), fullTop(8));
         body.addView(updateGate("03", "SHA-256 校验", "下载结果必须与发布端摘要完全一致", AppTheme.RED), fullTop(8));
-        body.addView(updateGate("04", "原子切换", "验证通过才替换 active；失败继续使用旧版本", AppTheme.WHITE), fullTop(8));
+        body.addView(updateGate("04", "确认切换", "验证通过才替换；失败继续使用当前版本", AppTheme.WHITE), fullTop(8));
 
-        addSection(body, "RELEASE / LAYERS", "后续成长可以走不同更新层");
-        body.addView(layerPanel("RESOURCE PACK", "日记、作品、愿望模板、实验数据与主题配置", "无需重装", AppTheme.TEAL), fullTop(10));
-        body.addView(layerPanel("APK CAPABILITY", "新原生交互、系统权限、渲染能力与更新引擎", "需要系统确认安装", AppTheme.AMBER), fullTop(8));
-        body.addView(layerPanel("PRIVATE EVIDENCE", "原始视频、个人愿望完成状态与本地附件", "永不公开推送", AppTheme.RED), fullTop(8));
+        addSection(body, "三层生长", "不同内容用不同方式进入 App");
+        body.addView(layerPanel("内容包", "日志、作品、实验数据与界面内容", "无需重装", AppTheme.TEAL), fullTop(10));
+        body.addView(layerPanel("能力包", "新交互、系统权限、渲染与更新能力", "安装确认", AppTheme.AMBER), fullTop(8));
+        body.addView(layerPanel("本地证据", "原始视频、个性称呼与本地附件", "只在本机", AppTheme.RED), fullTop(8));
 
         if (remoteManifest != null) {
-            addSection(body, "RELEASE NOTES / " + remoteManifest.versionName, remoteManifest.publishedAt);
+            addSection(body, "本次变化 · " + remoteManifest.versionName, remoteManifest.publishedAt);
             body.addView(AppTheme.text(this, remoteManifest.releaseNotes, 12, AppTheme.INK_3, false), fullTop(8));
             TextView release = command("查看完整发布页", "↗", AppTheme.WHITE, AppTheme.INK_2);
             release.setOnClickListener(view -> updateManager.openReleasePage(remoteManifest));
             body.addView(release, fullTop(10));
         }
 
-        addSection(body, "LOCAL / MAINTENANCE", "本地导入与故障恢复");
+        addSection(body, "本机维护", "手动导入与故障恢复");
         TextView importButton = command("导入 portfolio.json", "＋", AppTheme.INK, AppTheme.PAPER_2);
         importButton.setOnClickListener(view -> importContent());
         body.addView(importButton, fullTop(10));
@@ -716,7 +761,7 @@ public final class MainActivity extends Activity {
                     updateProgress = 100;
                     if (manifest.hasAppUpdate()) {
                         updateMessage = "发现能力包 " + manifest.versionName;
-                        headerStatus.setText(String.format(Locale.US, "UPDATE / %s", manifest.versionName));
+                        headerStatus.setText(String.format(Locale.US, "有更新 · %s", manifest.versionName));
                         headerStatus.setTextColor(AppTheme.AMBER);
                     } else if (changed) {
                         updateMessage = "成长资源包已更新";
@@ -784,7 +829,7 @@ public final class MainActivity extends Activity {
     private View videoEvidencePanel() {
         String rawUri = contentStore.preferences().getString(VIDEO_URI_KEY, "");
         LinearLayout card = panel(AppTheme.INK, rawUri.isEmpty() ? AppTheme.LINE : AppTheme.TEAL);
-        card.addView(AppTheme.label(this, "LOCAL EVIDENCE / VIDEO", rawUri.isEmpty() ? AppTheme.MUTED : AppTheme.TEAL));
+        card.addView(AppTheme.label(this, "本地录像", rawUri.isEmpty() ? AppTheme.MUTED : AppTheme.TEAL));
         card.addView(AppTheme.text(this,
             rawUri.isEmpty() ? "原始录像尚未关联" : "原始录像已在本机形成证据入口",
             18, AppTheme.WHITE, true), topParams(8));
@@ -803,131 +848,6 @@ public final class MainActivity extends Activity {
             card.addView(replace, topParams(8));
         }
         return card;
-    }
-
-    private List<JSONObject> allWishes() {
-        List<JSONObject> result = new ArrayList<>(contentStore.objects("wishlist"));
-        try {
-            JSONArray custom = new JSONArray(contentStore.preferences().getString(CUSTOM_WISHES_KEY, "[]"));
-            for (int index = 0; index < custom.length(); index++) {
-                JSONObject item = custom.optJSONObject(index);
-                if (item != null) result.add(item);
-            }
-        } catch (Exception ignored) {
-            // Invalid local custom entries are ignored without affecting the published list.
-        }
-        return result;
-    }
-
-    private View wishCard(JSONObject wish) {
-        String id = wish.optString("id", "wish-" + wish.optString("title", "").hashCode());
-        boolean done = isWishDone(id);
-        LinearLayout card = panel(done ? AppTheme.INK_2 : AppTheme.PAPER, done ? AppTheme.TEAL : AppTheme.INK);
-        card.setOrientation(LinearLayout.HORIZONTAL);
-        card.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView check = AppTheme.text(this, done ? "✓" : "◇", 22, done ? AppTheme.TEAL : AppTheme.RED, true);
-        check.setGravity(Gravity.CENTER);
-        card.addView(check, new LinearLayout.LayoutParams(dp(42), dp(42)));
-        LinearLayout copy = new LinearLayout(this);
-        copy.setOrientation(LinearLayout.VERTICAL);
-        copy.addView(AppTheme.text(this, wish.optString("title", "未命名愿望"), 16, done ? AppTheme.WHITE : AppTheme.INK, true));
-        String note = wish.optString("note", "");
-        if (!note.isEmpty()) copy.addView(AppTheme.text(this, note, 11, done ? AppTheme.MUTED : AppTheme.INK_3, false), topParams(4));
-        LinearLayout.LayoutParams copyParams = new LinearLayout.LayoutParams(0, -2, 1f);
-        copyParams.setMargins(dp(8), 0, 0, 0);
-        card.addView(copy, copyParams);
-        AppTheme.pressable(card);
-        card.setOnClickListener(view -> {
-            contentStore.preferences().edit().putBoolean("wish_done_" + id, !done).apply();
-            showDestination(3, false);
-            view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
-        });
-        if (wish.optBoolean("custom", false)) {
-            card.setOnLongClickListener(view -> {
-                confirmDeleteWish(id);
-                return true;
-            });
-        }
-        return card;
-    }
-
-    private void showAddWishDialog() {
-        EditText input = new EditText(this);
-        input.setHint("例如：完成一个真正帮助现场学习的产品");
-        input.setSingleLine(false);
-        input.setMinLines(2);
-        input.setPadding(dp(18), dp(14), dp(18), dp(14));
-        input.setTextColor(AppTheme.INK);
-        input.setHintTextColor(AppTheme.MUTED);
-        input.setBackground(AppTheme.panel(AppTheme.PAPER, AppTheme.INK, 8, this));
-        FrameLayout wrapper = new FrameLayout(this);
-        wrapper.setPadding(dp(18), dp(8), dp(18), 0);
-        wrapper.addView(input);
-
-        new AlertDialog.Builder(this)
-            .setTitle("添加一个愿望")
-            .setView(wrapper)
-            .setNegativeButton("取消", null)
-            .setPositiveButton("加入 NEXT", (dialog, which) -> {
-                String title = input.getText().toString().trim();
-                if (title.isEmpty()) return;
-                try {
-                    JSONArray custom = new JSONArray(contentStore.preferences().getString(CUSTOM_WISHES_KEY, "[]"));
-                    custom.put(new JSONObject()
-                        .put("id", "local-" + System.currentTimeMillis())
-                        .put("horizon", "NEXT")
-                        .put("title", title)
-                        .put("note", "由我在本机添加")
-                        .put("custom", true));
-                    contentStore.preferences().edit().putString(CUSTOM_WISHES_KEY, custom.toString()).apply();
-                    showDestination(3, false);
-                } catch (Exception error) {
-                    Toast.makeText(this, "无法保存愿望", Toast.LENGTH_SHORT).show();
-                }
-            })
-            .show();
-    }
-
-    private void confirmDeleteWish(String id) {
-        new AlertDialog.Builder(this)
-            .setTitle("删除这条本地愿望？")
-            .setMessage("长按仅可删除你在本机添加的条目。")
-            .setNegativeButton("保留", null)
-            .setPositiveButton("删除", (dialog, which) -> {
-                try {
-                    JSONArray source = new JSONArray(contentStore.preferences().getString(CUSTOM_WISHES_KEY, "[]"));
-                    JSONArray next = new JSONArray();
-                    for (int index = 0; index < source.length(); index++) {
-                        JSONObject item = source.optJSONObject(index);
-                        if (item != null && !id.equals(item.optString("id"))) next.put(item);
-                    }
-                    contentStore.preferences().edit()
-                        .putString(CUSTOM_WISHES_KEY, next.toString())
-                        .remove("wish_done_" + id)
-                        .apply();
-                    showDestination(3, false);
-                } catch (Exception ignored) {
-                    Toast.makeText(this, "删除失败", Toast.LENGTH_SHORT).show();
-                }
-            })
-            .show();
-    }
-
-    private boolean isWishDone(String id) {
-        return contentStore.preferences().getBoolean("wish_done_" + id, false);
-    }
-
-    private String wishGroupSummary(List<JSONObject> wishes, String horizon) {
-        int count = 0;
-        int completed = 0;
-        for (JSONObject wish : wishes) {
-            if (horizon.equalsIgnoreCase(wish.optString("horizon", "NEXT"))) {
-                count++;
-                if (isWishDone(wish.optString("id", ""))) completed++;
-            }
-        }
-        return completed + " / " + count + " 已完成";
     }
 
     private View trustGrid() {
@@ -1221,13 +1141,56 @@ public final class MainActivity extends Activity {
         AppTheme.reveal(child, index);
     }
 
-    private void copyIdentity(JSONObject profile) {
-        String value = profile.optString("name", "我的仪控实习作品集")
-            + "\n" + profile.optString("role", "")
-            + "\n" + profile.optString("headline", "");
-        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-        clipboard.setPrimaryClip(ClipData.newPlainText("SignalTrace 名片", value));
-        Toast.makeText(this, "名片文字已复制", Toast.LENGTH_SHORT).show();
+    private String displayName() {
+        if (contentStore == null) return "我的信号轨迹";
+        String value = contentStore.preferences().getString(DISPLAY_NAME_KEY, "我的信号轨迹");
+        return value == null || value.trim().isEmpty() ? "我的信号轨迹" : value.trim();
+    }
+
+    private void showDisplayNameDialog() {
+        EditText input = new EditText(this);
+        input.setText(displayName());
+        input.setSelectAllOnFocus(true);
+        input.setSingleLine(true);
+        input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(18)});
+        input.setPadding(dp(16), dp(13), dp(16), dp(13));
+        input.setTextColor(AppTheme.INK);
+        input.setHintTextColor(AppTheme.MUTED);
+        input.setBackground(AppTheme.panel(AppTheme.PAPER, AppTheme.INK, 7, this));
+
+        FrameLayout wrapper = new FrameLayout(this);
+        wrapper.setPadding(dp(18), dp(8), dp(18), 0);
+        wrapper.addView(input, new FrameLayout.LayoutParams(-1, -2));
+        new AlertDialog.Builder(this)
+            .setTitle("这里怎么称呼你")
+            .setView(wrapper)
+            .setNegativeButton("取消", null)
+            .setPositiveButton("保存", (dialog, which) -> {
+                String value = input.getText().toString().trim();
+                contentStore.preferences().edit()
+                    .putString(DISPLAY_NAME_KEY, value.isEmpty() ? "我的信号轨迹" : value)
+                    .apply();
+                View shell = buildShell();
+                setContentView(shell);
+                showDestination(0, false);
+            })
+            .show();
+    }
+
+    private void toggleImmersive() {
+        immersive = !immersive;
+        if (appHeader != null) appHeader.setVisibility(immersive ? View.GONE : View.VISIBLE);
+        if (navigation != null) navigation.setVisibility(immersive ? View.GONE : View.VISIBLE);
+        int flags = immersive
+            ? View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            : View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
+        getWindow().getDecorView().setSystemUiVisibility(flags);
+        Toast.makeText(this, immersive ? "已进入沉浸模式，返回键退出" : "已退出沉浸模式", Toast.LENGTH_SHORT).show();
     }
 
     private void attachVideo() {
@@ -1286,7 +1249,7 @@ public final class MainActivity extends Activity {
     private void confirmRestore() {
         new AlertDialog.Builder(this)
             .setTitle("恢复内置内容？")
-            .setMessage("在线或本地导入的成长资源包将被移除；愿望完成状态和本地视频关联会保留。")
+            .setMessage("在线或本地导入的成长资源包将被移除；个性称呼和本地视频关联会保留。")
             .setNegativeButton("取消", null)
             .setPositiveButton("恢复", (dialog, which) -> {
                 contentStore.restoreEmbedded();
@@ -1298,6 +1261,10 @@ public final class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        if (immersive) {
+            toggleImmersive();
+            return;
+        }
         if (activeDestination == 1 && internshipMode != 0) {
             internshipMode = 0;
             showDestination(1, true);
